@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarkDown 文档整理工具</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/default.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部标题 -->
+        <header class="header">
+            <h1>📝 MarkDown 文档整理工具</h1>
+            <p>格式修复 · 标点规范 · 繁简转换</p>
+        </header>
+
+        <!-- 主要内容区域 -->
+        <main class="main-content">
+            <!-- 左侧控制面板 -->
+            <aside class="control-panel">
+                <!-- 文件上传区域 -->
+                <div class="upload-section">
+                    <h3>📁 文件选择</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <input type="file" id="fileInput" accept=".md,.markdown,.txt" hidden>
+                        <div class="upload-placeholder">
+                            <div class="upload-icon">📄</div>
+                            <p>拖拽文件到此处<br>或点击选择文件</p>
+                            <small>支持 .md, .markdown, .txt 格式</small>
+                        </div>
+                    </div>
+                    <div class="file-info" id="fileInfo" style="display: none;">
+                        <span class="file-name" id="fileName"></span>
+                        <button class="btn-clear" id="clearFile">✕</button>
+                    </div>
+                </div>
+
+                <!-- 修复选项 -->
+                <div class="options-section">
+                    <h3>🔧 修复选项</h3>
+                    <div class="option-group">
+                        <label class="option-item">
+                            <input type="checkbox" id="fixFormat" checked>
+                            <span class="checkmark"></span>
+                            <div class="option-content">
+                                <strong>格式修复</strong>
+                                <small>标题层级、列表缩进、代码块格式</small>
+                            </div>
+                        </label>
+                        
+                        <label class="option-item">
+                            <input type="checkbox" id="fixPunctuation" checked>
+                            <span class="checkmark"></span>
+                            <div class="option-content">
+                                <strong>标点规范</strong>
+                                <small>中英文标点符号规范化</small>
+                            </div>
+                        </label>
+                        
+                        <label class="option-item">
+                            <input type="checkbox" id="convertTraditional" checked>
+                            <span class="checkmark"></span>
+                            <div class="option-content">
+                                <strong>繁简转换</strong>
+                                <small>繁体中文转换为简体中文</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="actions-section">
+                    <button class="btn-primary" id="processBtn" disabled>
+                        ⚡ 一键修复
+                    </button>
+                    <button class="btn-secondary" id="previewBtn" disabled>
+                        👁️ 预览对比
+                    </button>
+                    <button class="btn-download" id="downloadBtn" style="display: none;">
+                        💾 下载文件
+                    </button>
+                </div>
+
+                <!-- 处理状态 -->
+                <div class="status-section" id="statusSection" style="display: none;">
+                    <div class="status-item">
+                        <span class="status-label">处理状态:</span>
+                        <span class="status-value" id="statusText">准备就绪</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 右侧编辑预览区域 -->
+            <section class="editor-section">
+                <div class="editor-header">
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" id="editTab">📝 编辑器</button>
+                        <button class="tab-btn" id="previewTab">👁️ 预览</button>
+                        <button class="tab-btn" id="compareTab" style="display: none;">⚖️ 对比</button>
+                    </div>
+                </div>
+
+                <!-- 编辑器容器 -->
+                <div class="editor-container">
+                    <!-- 源码编辑器 -->
+                    <div class="editor-pane active" id="editorPane">
+                        <div class="editor-toolbar">
+                            <span class="toolbar-title">源码编辑 (支持手动微调)</span>
+                            <button class="btn-reset" id="resetBtn" title="重置到原始内容">↺ 重置</button>
+                        </div>
+                        <textarea id="markdownEditor" placeholder="选择 Markdown 文件开始编辑..."></textarea>
+                    </div>
+
+                    <!-- 预览区域 -->
+                    <div class="preview-pane" id="previewPane">
+                        <div class="preview-toolbar">
+                            <span class="toolbar-title">Markdown 预览</span>
+                        </div>
+                        <div class="preview-content" id="previewContent">
+                            <div class="preview-placeholder">
+                                <div class="preview-icon">👁️</div>
+                                <p>实时预览 Markdown 渲染效果</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 对比视图 -->
+                    <div class="compare-pane" id="comparePane">
+                        <div class="compare-header">
+                            <div class="compare-title">
+                                <span class="compare-label original">📄 修复前</span>
+                                <span class="compare-label processed">✨ 修复后</span>
+                            </div>
+                        </div>
+                        <div class="compare-content">
+                            <div class="compare-side original">
+                                <pre id="originalContent"></pre>
+                            </div>
+                            <div class="compare-side processed">
+                                <pre id="processedContent"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
