@@ -1,0 +1,41 @@
+# Caddyfile for Markdown Cleaner
+# 将 your-domain.com 替换为你的实际域名
+
+your-domain.com {
+    # 反向代理到本地应用
+    reverse_proxy localhost:3000
+    
+    # 启用 gzip 压缩
+    encode gzip
+    
+    # 设置响应头
+    header {
+        # 安全头
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        
+        # 缓存控制
+        Cache-Control "no-cache, no-store, must-revalidate" /api/*
+    }
+    
+    # 文件上传大小限制 (与应用保持一致)
+    request_body {
+        max_size 10MB
+    }
+}
+
+# 如果需要限制访问 IP，可以添加：
+# your-domain.com {
+#     @allowed {
+#         remote_ip 192.168.1.0/24 your.home.ip.address
+#     }
+#     handle @allowed {
+#         reverse_proxy localhost:3000
+#         encode gzip
+#     }
+#     handle {
+#         respond "Access denied" 403
+#     }
+# }

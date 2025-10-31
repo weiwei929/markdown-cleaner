@@ -42,7 +42,40 @@ pm2 startup
 pm2 save
 ```
 
-### 4. 配置反向代理 (Nginx)
+### 4. 配置反向代理
+
+#### 方案一：Caddy (推荐) 🚀
+```bash
+# 安装 Caddy
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update && sudo apt install caddy
+
+# 创建 Caddyfile
+sudo nano /etc/caddy/Caddyfile
+```
+
+```caddy
+# Caddyfile - 超简单配置！
+your-domain.com {
+    reverse_proxy localhost:3000
+    encode gzip
+}
+```
+
+```bash
+# 启动 Caddy
+sudo systemctl enable caddy
+sudo systemctl start caddy
+```
+
+就这么简单！Caddy 会自动：
+- 申请和管理 SSL 证书 🔒
+- HTTP 自动跳转到 HTTPS
+- 处理证书续期
+
+#### 方案二：Nginx (传统方案)
 ```bash
 # 安装 Nginx
 sudo apt install nginx  # Ubuntu/Debian
@@ -76,14 +109,9 @@ server {
 sudo ln -s /etc/nginx/sites-available/markdown-cleaner /etc/nginx/sites-enabled/
 sudo nginx -t  # 测试配置
 sudo systemctl restart nginx
-```
 
-### 5. SSL 证书 (可选)
-```bash
-# 安装 Certbot
+# SSL 证书
 sudo apt install certbot python3-certbot-nginx
-
-# 获取免费 SSL 证书
 sudo certbot --nginx -d your-domain.com
 ```
 
@@ -105,8 +133,24 @@ sudo firewall-cmd --reload
 ```
 
 ### 限制访问 (可选)
-如果只想内部使用，可以在 Nginx 配置中添加 IP 白名单：
 
+#### Caddy IP 白名单
+```caddy
+your-domain.com {
+    @allowed {
+        remote_ip 192.168.1.0/24 your.home.ip.address
+    }
+    handle @allowed {
+        reverse_proxy localhost:3000
+        encode gzip
+    }
+    handle {
+        respond "Access denied" 403
+    }
+}
+```
+
+#### Nginx IP 白名单
 ```nginx
 location / {
     allow 192.168.1.0/24;  # 允许内网访问
@@ -145,7 +189,12 @@ pm2 restart all        # 重启应用
 # 查看应用日志
 pm2 logs markdown-cleaner
 
-# 查看 Nginx 日志
+# 查看反向代理日志
+# Caddy 日志
+sudo journalctl -u caddy -f
+sudo tail -f /var/log/caddy/access.log
+
+# Nginx 日志  
 sudo tail -f /var/log/nginx/access.log
 sudo tail -f /var/log/nginx/error.log
 ```
