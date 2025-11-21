@@ -284,7 +284,9 @@ class MarkdownCleanerApp {
             const options = {
                 fixFormat: this.elements.fixFormat.checked,
                 fixPunctuation: this.elements.fixPunctuation.checked,
-                convertTraditional: this.elements.convertTraditional.checked
+                normalizeQuotes: true, // 始终启用中文全角双引号转换
+                convertTraditional: this.elements.convertTraditional.checked,
+                fixSpacing: true // 默认启用空格修复
             };
 
             // 发送请求到服务器
