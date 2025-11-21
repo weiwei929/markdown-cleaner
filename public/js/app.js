@@ -12,7 +12,9 @@ class MarkdownCleanerApp {
             processedContent: '',
             isProcessing: false,
             activeTab: 'edit',
-            editor: null
+            editor: null,
+            uiMode: 'overview',
+            isSavingDraft: false
         };
 
         // DOM 元素引用
@@ -29,8 +31,13 @@ class MarkdownCleanerApp {
         try {
             this.initElements();
             this.initEventListeners();
+            Settings.apply(this);
             this.initEditor();
-            this.updateUI();
+            const savedMode = localStorage.getItem('mdCleanerUiMode');
+            if (savedMode === 'basic' || savedMode === 'expert') this.state.uiMode = savedMode; else this.state.uiMode = 'overview';
+            this.updateUIByMode();
+            if (window.SectionNav) SectionNav.updateHotkeys(this);
+            this.updateHotkeyHint();
             
             
         } catch (error) {
@@ -61,6 +68,9 @@ class MarkdownCleanerApp {
             processBtn: document.getElementById('processBtn'),
             exportBtn: document.getElementById('exportBtn'),
             analyzeBtn: document.getElementById('analyzeBtn'),
+            expertRulesBtn: document.getElementById('expertRulesBtn'),
+            expertRunBtn: document.getElementById('expertRunBtn'),
+            findReplaceBtn: document.getElementById('findReplaceBtn'),
             resetBtn: document.getElementById('resetBtn'),
             
             // 状态显示
@@ -99,6 +109,50 @@ class MarkdownCleanerApp {
         this.elements.btnApplySafePlan = document.getElementById('btnApplySafePlan');
         this.elements.btnApplySuggestedPlan = document.getElementById('btnApplySuggestedPlan');
         this.elements.btnExportPlanJson = document.getElementById('btnExportPlanJson');
+        this.elements.settingsBtn = document.getElementById('settingsBtn');
+        this.elements.settingsModal = document.getElementById('settingsModal');
+        this.elements.settingsBackdrop = document.getElementById('settingsBackdrop');
+        this.elements.closeSettingsModal = document.getElementById('closeSettingsModal');
+        this.elements.saveSettingsBtn = document.getElementById('saveSettingsBtn');
+        this.elements.cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+        this.elements.settingEnableHotkeys = document.getElementById('settingEnableHotkeys');
+        this.elements.editorToolbar = document.querySelector('#editorPane .editor-toolbar');
+        this.elements.optionsSection = document.getElementById('optionsSection');
+        this.elements.overviewPane = document.getElementById('overviewPane');
+        this.elements.mainContent = document.getElementById('mainContent');
+        this.elements.modeBar = document.getElementById('modeBar');
+        this.elements.modeText = document.getElementById('modeText');
+        this.elements.backToOverviewBtn = document.getElementById('backToOverviewBtn');
+        this.elements.cardBasic = document.getElementById('cardBasic');
+        this.elements.cardExpert = document.getElementById('cardExpert');
+        this.elements.returnModal = document.getElementById('returnModal');
+        this.elements.returnBackdrop = document.getElementById('returnBackdrop');
+        this.elements.closeReturnModal = document.getElementById('closeReturnModal');
+        this.elements.btnReturnSave = document.getElementById('btnReturnSave');
+        this.elements.btnReturnNoSave = document.getElementById('btnReturnNoSave');
+        this.elements.btnReturnCancel = document.getElementById('btnReturnCancel');
+        this.elements.returnSavingHint = document.getElementById('returnSavingHint');
+        this.elements.expertModal = document.getElementById('expertModal');
+        this.elements.expertBackdrop = document.getElementById('expertBackdrop');
+        this.elements.closeExpertModal = document.getElementById('closeExpertModal');
+        this.elements.saveExpertRules = document.getElementById('saveExpertRules');
+        this.elements.cancelExpertRules = document.getElementById('cancelExpertRules');
+        this.elements.findReplaceModal = document.getElementById('findReplaceModal');
+        this.elements.findReplaceBackdrop = document.getElementById('findReplaceBackdrop');
+        this.elements.closeFindReplaceModal = document.getElementById('closeFindReplaceModal');
+        this.elements.findText = document.getElementById('findText');
+        this.elements.replaceText = document.getElementById('replaceText');
+        this.elements.findCaseSensitive = document.getElementById('findCaseSensitive');
+        this.elements.findUseRegex = document.getElementById('findUseRegex');
+        this.elements.btnReplaceAll = document.getElementById('btnReplaceAll');
+        this.elements.btnStartInteractive = document.getElementById('btnStartInteractive');
+        this.elements.cancelFindReplace = document.getElementById('cancelFindReplace');
+        this.elements.interactivePanel = document.getElementById('interactivePanel');
+        this.elements.interactiveBackdrop = document.getElementById('interactiveBackdrop');
+        this.elements.closeInteractivePanel = document.getElementById('closeInteractivePanel');
+        this.elements.btnReplaceCurrent = document.getElementById('btnReplaceCurrent');
+        this.elements.btnSkipCurrent = document.getElementById('btnSkipCurrent');
+        this.elements.btnStopInteractive = document.getElementById('btnStopInteractive');
     }
 
     /**
@@ -154,6 +208,24 @@ class MarkdownCleanerApp {
         this.elements.analyzeBtn.addEventListener('click', () => {
             this.analyzeContent();
         });
+        if (this.elements.expertRulesBtn) this.elements.expertRulesBtn.addEventListener('click', () => { this.openExpertModal(); });
+        if (this.elements.expertRunBtn) this.elements.expertRunBtn.addEventListener('click', () => { this.requestExpertRun(); });
+        if (this.elements.findReplaceBtn) this.elements.findReplaceBtn.addEventListener('click', () => { this.openFindReplaceModal(); });
+        if (this.elements.closeFindReplaceModal) this.elements.closeFindReplaceModal.addEventListener('click', () => { this.closeFindReplaceModal(); });
+        if (this.elements.cancelFindReplace) this.elements.cancelFindReplace.addEventListener('click', () => { this.closeFindReplaceModal(); });
+        if (this.elements.btnReplaceAll) this.elements.btnReplaceAll.addEventListener('click', () => { this.handleReplaceAll(); });
+        if (this.elements.btnStartInteractive) this.elements.btnStartInteractive.addEventListener('click', () => { this.startInteractiveReplace(); });
+        if (this.elements.closeInteractivePanel) this.elements.closeInteractivePanel.addEventListener('click', () => { this.stopInteractiveReplace(); });
+        if (this.elements.btnStopInteractive) this.elements.btnStopInteractive.addEventListener('click', () => { this.stopInteractiveReplace(); });
+        if (this.elements.btnReplaceCurrent) this.elements.btnReplaceCurrent.addEventListener('click', () => { this.replaceCurrentMatch(); });
+        if (this.elements.btnSkipCurrent) this.elements.btnSkipCurrent.addEventListener('click', () => { this.skipCurrentMatch(); });
+        if (this.elements.cardBasic) this.elements.cardBasic.addEventListener('click', () => { this.switchToMode('basic'); });
+        if (this.elements.cardExpert) this.elements.cardExpert.addEventListener('click', () => { this.switchToMode('expert'); });
+        if (this.elements.backToOverviewBtn) this.elements.backToOverviewBtn.addEventListener('click', () => { this.openReturnModal(); });
+        if (this.elements.closeReturnModal) this.elements.closeReturnModal.addEventListener('click', () => { this.closeReturnModal(); });
+        if (this.elements.btnReturnCancel) this.elements.btnReturnCancel.addEventListener('click', () => { this.closeReturnModal(); });
+        if (this.elements.btnReturnSave) this.elements.btnReturnSave.addEventListener('click', () => { this.handleReturn(true); });
+        if (this.elements.btnReturnNoSave) this.elements.btnReturnNoSave.addEventListener('click', () => { this.handleReturn(false); });
         this.elements.closeIssuesPanel.addEventListener('click', () => {
             this.closeIssuesPanel();
         });
@@ -169,15 +241,16 @@ class MarkdownCleanerApp {
         this.elements.closePlanModal.addEventListener('click', () => {
             this.closePlanModal();
         });
-        this.elements.btnApplySafePlan.addEventListener('click', () => {
-            this.applySafePlan();
-        });
-        this.elements.btnApplySuggestedPlan.addEventListener('click', () => {
-            this.applySuggestedPlan();
-        });
-        this.elements.btnExportPlanJson.addEventListener('click', () => {
-            this.exportPlanJson();
-        });
+        if (this.elements.closeExpertModal) this.elements.closeExpertModal.addEventListener('click', () => { this.closeExpertModal(); });
+        if (this.elements.cancelExpertRules) this.elements.cancelExpertRules.addEventListener('click', () => { this.closeExpertModal(); });
+        if (this.elements.saveExpertRules) this.elements.saveExpertRules.addEventListener('click', () => { this.saveExpertRulesConfig(); });
+        this.elements.btnApplySafePlan.addEventListener('click', () => { PlanModal.applySafe(this); });
+        this.elements.btnApplySuggestedPlan.addEventListener('click', () => { PlanModal.applySuggested(this); });
+        this.elements.btnExportPlanJson.addEventListener('click', () => { PlanModal.exportPlanJson(this); });
+        if (this.elements.settingsBtn) this.elements.settingsBtn.addEventListener('click', () => { this.openSettingsModal(); });
+        if (this.elements.closeSettingsModal) this.elements.closeSettingsModal.addEventListener('click', () => { this.closeSettingsModal(); });
+        if (this.elements.cancelSettingsBtn) this.elements.cancelSettingsBtn.addEventListener('click', () => { this.closeSettingsModal(); });
+        if (this.elements.saveSettingsBtn) this.elements.saveSettingsBtn.addEventListener('click', () => { this.saveSettings(); });
 
         // 标签页切换
         this.elements.editTab.addEventListener('click', () => {
@@ -567,21 +640,186 @@ class MarkdownCleanerApp {
     updateUI() {
         const hasFile = !!this.state.currentFile;
         const hasProcessed = !!this.state.processedContent && this.state.processedContent !== this.state.originalContent;
+        const mode = (this.state.settings && this.state.settings.mode) || 'basic';
         
         // 更新按钮状态
-        this.elements.processBtn.disabled = !hasFile || this.state.isProcessing;
-        this.elements.analyzeBtn.disabled = !hasFile;
-        this.elements.exportBtn.disabled = !hasFile;
-        this.elements.resetBtn.disabled = !hasFile;
+        this.updateControlState(mode, hasFile);
 
         // 更新按钮文本
         if (this.state.isProcessing) {
             this.elements.processBtn.textContent = '⏳ 处理中...';
         } else {
-            this.elements.processBtn.textContent = '⚡ 一键修复';
+            this.elements.processBtn.textContent = (mode === 'expert') ? '⚡ 一键修复（基础版已禁用）' : '⚡ 一键修复';
         }
 
         
+    }
+
+    updateUIByMode() {
+        const m = this.state.uiMode || 'overview';
+        if (this.elements.overviewPane) this.elements.overviewPane.style.display = (m === 'overview') ? 'block' : 'none';
+        if (this.elements.mainContent) {
+            if (m === 'overview') {
+                this.elements.mainContent.style.display = 'none';
+            } else {
+                try { this.elements.mainContent.removeAttribute('style'); } catch(e) { this.elements.mainContent.style.display = ''; }
+            }
+        }
+        if (this.elements.modeBar) this.elements.modeBar.style.display = (m === 'overview') ? 'none' : 'block';
+        if (this.elements.modeText) this.elements.modeText.textContent = '当前模式：' + (m === 'basic' ? '基础版' : 'AI 专家版');
+        localStorage.setItem('mdCleanerUiMode', m);
+        this.state.settings = Object.assign({}, this.state.settings || {}, { mode: (m === 'basic' ? 'basic' : 'expert') });
+        this.updateModeView(m);
+        this.updateUI();
+    }
+
+    updateModeView(m) {
+        const showBasic = (m === 'basic');
+        const showExpert = (m === 'expert');
+        if (this.elements.optionsSection) this.elements.optionsSection.style.display = showBasic ? 'block' : 'none';
+        if (this.elements.settingsBtn) this.elements.settingsBtn.style.display = showBasic ? 'inline-block' : 'none';
+        if (this.elements.analyzeBtn) this.elements.analyzeBtn.style.display = showBasic ? 'inline-block' : 'none';
+        if (this.elements.processBtn) this.elements.processBtn.style.display = showBasic ? 'inline-block' : 'none';
+        if (this.elements.expertRulesBtn) this.elements.expertRulesBtn.style.display = showExpert ? 'inline-block' : 'none';
+        if (this.elements.expertRunBtn) this.elements.expertRunBtn.style.display = showExpert ? 'inline-block' : 'none';
+        if (this.elements.findReplaceBtn) this.elements.findReplaceBtn.style.display = showExpert ? 'inline-block' : 'none';
+        if (this.elements.exportBtn) this.elements.exportBtn.style.display = 'inline-block';
+    }
+
+    updateControlState(mode, hasFile) {
+        this.elements.processBtn.disabled = !hasFile || this.state.isProcessing || mode === 'expert';
+        this.elements.analyzeBtn.disabled = !hasFile || mode === 'expert';
+        this.elements.exportBtn.disabled = !hasFile;
+        this.elements.resetBtn.disabled = !hasFile;
+        if (this.elements.expertRulesBtn) this.elements.expertRulesBtn.disabled = !hasFile || mode !== 'expert';
+        if (this.elements.expertRunBtn) this.elements.expertRunBtn.disabled = !hasFile || mode !== 'expert' || !(this.state.expertRules && this.state.expertRules.prompt && this.state.expertRules.prompt.trim());
+        if (this.elements.findReplaceBtn) this.elements.findReplaceBtn.disabled = !hasFile || mode !== 'expert';
+    }
+
+    switchToMode(m) {
+        if (m !== 'basic' && m !== 'expert') return;
+        this.state.uiMode = m;
+        this.loadDraft(m);
+        this.updateUIByMode();
+    }
+
+    openReturnModal() {
+        if (this.elements.returnModal) this.elements.returnModal.style.display = 'block';
+        if (this.elements.returnBackdrop) this.elements.returnBackdrop.style.display = 'block';
+        document.body.classList.add('modal-open');
+    }
+    closeReturnModal() {
+        if (this.elements.returnModal) this.elements.returnModal.style.display = 'none';
+        if (this.elements.returnBackdrop) this.elements.returnBackdrop.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        if (this.elements.returnSavingHint) this.elements.returnSavingHint.style.display = 'none';
+    }
+    handleReturn(save) {
+        if (this.state.isSavingDraft) return;
+        this.state.isSavingDraft = true;
+        if (this.elements.returnSavingHint) this.elements.returnSavingHint.style.display = 'block';
+        this.disableAllControls(true);
+        try {
+            if (save) this.saveDraft(this.state.uiMode);
+            this.state.uiMode = 'overview';
+            this.updateUIByMode();
+            this.updateStatus(save ? '已保存草稿并返回总览' : '已返回总览');
+        } catch (e) {
+            this.showError('保存草稿失败: ' + e.message);
+        } finally {
+            this.state.isSavingDraft = false;
+            this.disableAllControls(false);
+            this.closeReturnModal();
+        }
+    }
+    disableAllControls(disabled) {
+        const btns = [this.elements.analyzeBtn, this.elements.processBtn, this.elements.exportBtn, this.elements.settingsBtn, this.elements.expertRulesBtn, this.elements.expertRunBtn, this.elements.findReplaceBtn];
+        btns.forEach(b => { if (b) b.disabled = !!disabled; });
+    }
+    saveDraft(mode) {
+        const key = mode === 'expert' ? 'mdCleanerDraft_expert' : 'mdCleanerDraft_basic';
+        const fileName = this.state.currentFile ? this.state.currentFile.name : '';
+        const payload = { content: this.elements.markdownEditor.value || '', fileName, ts: Date.now() };
+        localStorage.setItem(key, JSON.stringify(payload));
+    }
+    loadDraft(mode) {
+        const key = mode === 'expert' ? 'mdCleanerDraft_expert' : 'mdCleanerDraft_basic';
+        try {
+            const raw = localStorage.getItem(key);
+            if (!raw) return;
+            const d = JSON.parse(raw);
+            if (d && typeof d.content === 'string') {
+                this.elements.markdownEditor.value = d.content;
+                this.state.processedContent = d.content;
+                this.updateCompareView();
+            }
+        } catch (e) {}
+    }
+
+    async requestExpertRun() {
+        const content = this.elements.markdownEditor.value || '';
+        const rules = this.state.expertRules || { prompt: '' };
+        if (!content.trim()) { this.showError('请先输入或导入内容'); return; }
+        if (!rules.prompt || !rules.prompt.trim()) { this.showError('请先在专家规则中填写规则'); return; }
+        try {
+            this.updateStatus('正在提交专家处理...');
+            const resp = await fetch('/api/ai/suggest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, rules }) });
+            const result = await resp.json();
+            if (!result.success) throw new Error(result.error || '专家处理失败');
+            this.renderExpertSuggestions(result.data);
+            this.openIssuesPanel();
+            this.updateStatus('专家建议已生成');
+        } catch (e) {
+            this.showError('专家处理失败: ' + e.message);
+        }
+    }
+
+    renderExpertSuggestions(data) {
+        const list = this.elements.issuesList;
+        const arr = (data && data.suggestions) || [];
+        let html = '';
+        html += `<div class="issues-summary">`;
+        html += `<div class="summary-line"><strong>专家建议</strong> · 数量：${arr.length}</div>`;
+        const prompt = (data && data.rules && data.rules.prompt) || '';
+        if (prompt) html += `<div class="summary-line">规则：${prompt.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+        html += `</div>`;
+        const samples = arr.slice(0, 50).map(it => `<div class="issue-item"><span class="issue-icon">🧠</span><div class="issue-message">第${(it.line||0)+1}行 · ${it.message}</div></div>`).join('');
+        html += samples || '<div class="summary-line">暂无建议</div>';
+        const aggs = (data && data.aggregations && data.aggregations.terms) || [];
+        if (aggs.length) {
+            html += `<div class="summary-line" style="margin-top:10px;">批量替代映射：</div>`;
+            html += `<ul class="summary-list">` + aggs.map((t,i) => `<li>${t.from} → ${t.to} · 次数 ${t.count} <button class='btn-secondary' id='btnAggApplyGlobal_${i}'>应用到全局</button></li>`).join('') + `</ul>`;
+        }
+        html += `<div class="issues-actions"><button class="btn-secondary" id="btnBackSummary">返回摘要</button></div>`;
+        list.innerHTML = html;
+        const backBtn = document.getElementById('btnBackSummary');
+        if (backBtn) backBtn.onclick = () => this.renderIssues(this.state.lastAnalyzeData);
+        this.bindExpertAggregations(aggs);
+    }
+
+    bindExpertAggregations(aggs) {
+        (aggs||[]).forEach((t,i) => {
+            const btn = document.getElementById(`btnAggApplyGlobal_${i}`);
+            if (btn) btn.onclick = () => this.requestApplyAggregation(t);
+        });
+    }
+
+    async requestApplyAggregation(mapping) {
+        try {
+            const content = this.elements.markdownEditor.value || '';
+            const resp = await fetch('/api/ai/apply-bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, mappings: [mapping] }) });
+            const result = await resp.json();
+            if (!result.success) throw new Error(result.error || '应用失败');
+            this.state.processedContent = result.data.text;
+            this.elements.markdownEditor.value = this.state.processedContent;
+            this.updateCompareView();
+            this.elements.compareTab.style.display = 'block';
+            this.switchTab('compare');
+            this.updateUI();
+            this.updateStatus('已应用批量替代到全局');
+        } catch (e) {
+            this.showError('应用失败: ' + e.message);
+        }
     }
 
     async analyzeContent() {
@@ -654,6 +892,7 @@ class MarkdownCleanerApp {
         html += `<button class="btn-secondary" id="btnViewSuggested">查看建议修复 (${stats.suggested})</button>`;
         html += `<button class="btn-secondary" id="btnViewWarning">查看警告说明 (${stats.warning})</button>`;
         html += `<button class="btn-secondary" id="btnPlanGlobal">生成全局修复计划</button>`;
+        html += `<button class="btn-secondary" id="btnPlanGlobalExport">导出全局计划 JSON</button>`;
         html += `</div>`;
         html += `</div>`;
 
@@ -681,10 +920,12 @@ class MarkdownCleanerApp {
         const sugBtn = document.getElementById('btnViewSuggested');
         const warnBtn = document.getElementById('btnViewWarning');
         const planGlobalBtn = document.getElementById('btnPlanGlobal');
+        const planGlobalExportBtn = document.getElementById('btnPlanGlobalExport');
         if (safeBtn) safeBtn.onclick = () => this.renderCategoryView('SAFE', grouped);
         if (sugBtn) sugBtn.onclick = () => this.renderCategoryView('SUGGESTED', grouped);
         if (warnBtn) warnBtn.onclick = () => this.renderCategoryView('WARNING', grouped);
         if (planGlobalBtn) planGlobalBtn.onclick = () => this.requestPlanGlobal();
+        if (planGlobalExportBtn) planGlobalExportBtn.onclick = () => this.exportGlobalPlanJson();
     }
 
     bindSectionActions() {
@@ -713,12 +954,14 @@ class MarkdownCleanerApp {
         html += `<div class='summary-line'>安全:${grouped.SAFE.length} 建议:${grouped.SUGGESTED.length} 警告:${grouped.WARNING.length}</div></div>`;
         const samples = issues.slice(0, 20).map(it => `<div class='issue-item ${it.type}'><span class='issue-icon'>${this.getTypeIcon(it.type)}</span><div class='issue-message'>第${it.line + 1}行 · ${it.message}</div></div>`).join('');
         html += samples ? `<div style='margin-top:10px;'>示例（最多显示20条）：</div>${samples}` : '';
-        html += `<div class='issues-actions'><button class='btn-secondary' id='btnBackSummary'>返回摘要</button> <button class='btn-secondary' id='btnJumpToSection'>跳转到板块起始</button> <button class='btn-secondary' id='btnJumpToSectionEnd'>跳转到板块末尾</button></div>`;
+        html += `<div class='issues-actions'><button class='btn-secondary' id='btnBackSummary'>返回摘要</button> <button class='btn-secondary' id='btnJumpToSection'>跳转到板块起始</button> <button class='btn-secondary' id='btnJumpToSectionEnd'>跳转到板块末尾</button> <button class='btn-secondary' id='btnJumpPrevSection'>上一板块</button> <button class='btn-secondary' id='btnJumpNextSection'>下一板块</button></div>`;
+        html += `<div class='summary-line'>快捷键：<span class='kbd'>Alt + ↑</span> 上一板块 · <span class='kbd'>Alt + ↓</span> 下一板块</div>`;
         list.innerHTML = html;
         const backBtn = document.getElementById('btnBackSummary');
         if (backBtn) backBtn.onclick = () => this.renderIssues(this.state.lastAnalyzeData);
         const jumpBtn = document.getElementById('btnJumpToSection');
-        if (jumpBtn) jumpBtn.onclick = () => this.jumpToLine(sec.range.start + 1);
+        if (jumpBtn) jumpBtn.onclick = () => SectionNav.jumpToLine(this, sec.range.start + 1);
+        SectionNav.bindButtons(this, sec);
         const jumpEndBtn = document.getElementById('btnJumpToSectionEnd');
         if (jumpEndBtn) jumpEndBtn.onclick = () => this.jumpToLine(sec.range.end + 1);
     }
@@ -733,7 +976,7 @@ class MarkdownCleanerApp {
             });
             const result = await resp.json();
             if (!result.success) throw new Error(result.error || '计划生成失败');
-            this.openPlanModal(result.data, sec);
+            PlanModal.open(this, result.data, sec);
         } catch (e) {
             this.showError('计划生成失败: ' + e.message);
         }
@@ -749,7 +992,7 @@ class MarkdownCleanerApp {
             const result = await resp.json();
             if (!result.success) throw new Error(result.error || '计划生成失败');
             const sec = { heading: '全局', level: 1, range: { start: 0, end: (this.elements.markdownEditor.value.split(/\r?\n/).length - 1) } };
-            this.openPlanModal(result.data, sec);
+            PlanModal.open(this, result.data, sec);
         } catch (e) {
             this.showError('计划生成失败: ' + e.message);
         }
@@ -763,6 +1006,14 @@ class MarkdownCleanerApp {
         html += `<div class='summary-line'>选择优先级：${(data.selectedPriorities || []).join(', ') || '无'}</div>`;
         html += `<div class='summary-line'>估算：安全 ${data.estimate.safe} · 建议 ${data.estimate.suggested} · 警告 ${data.estimate.warning}</div>`;
         html += `</div>`;
+        html += `<div class='compare-content'>
+                    <div class='compare-side original'>
+                        <pre id='planPreviewOriginal'></pre>
+                    </div>
+                    <div class='compare-side processed'>
+                        <pre id='planPreviewProcessed'></pre>
+                    </div>
+                 </div>`;
         el.innerHTML = html;
         // 缓存当前计划
         this.state.lastPlanData = data;
@@ -770,6 +1021,7 @@ class MarkdownCleanerApp {
         this.elements.planModal.style.display = 'block';
         this.elements.planBackdrop.style.display = 'block';
         document.body.classList.add('modal-open');
+        this.requestPreviewForPlan();
     }
 
     closePlanModal() {
@@ -925,6 +1177,30 @@ class MarkdownCleanerApp {
     }
 }
 
+MarkdownCleanerApp.prototype.requestPreviewForPlan = async function() {
+    try {
+        const content = this.elements.markdownEditor.value || '';
+        const sec = this.state.lastPlanSection;
+        const plan = { selectedPriorities: (this.state.lastPlanData?.selectedPriorities || ['SAFE','SUGGESTED']) };
+        if (sec && sec.heading !== '全局') plan.sectionRange = sec.range;
+        const resp = await fetch('/api/preview-fixes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content, plan })
+        });
+        const result = await resp.json();
+        if (!result.success) throw new Error(result.error || '预览生成失败');
+        const origEl = document.getElementById('planPreviewOriginal');
+        const procEl = document.getElementById('planPreviewProcessed');
+        const orig = result.data.originalSegment || '';
+        const proc = result.data.processedSegment || '';
+        origEl.textContent = orig.slice(0, 4000);
+        procEl.textContent = proc.slice(0, 4000);
+    } catch (e) {
+        this.showError('预览生成失败: ' + e.message);
+    }
+};
+
 // 导出弹窗与保存逻辑
 MarkdownCleanerApp.prototype.openExportModal = function() {
     const defaultName = this.state.currentFile ? this.state.currentFile.name.replace(/\.(md|markdown|txt)$/i, '_cleaned.md') : 'document_cleaned.md';
@@ -1021,3 +1297,218 @@ MarkdownCleanerApp.prototype.getTypeIcon = function(type) {
     if (type === 'warning') return '⚠️';
     return '✅';
 };
+
+MarkdownCleanerApp.prototype.openSettingsModal = function() {
+    const s = this.state.settings || Settings.load();
+    if (this.elements.settingEnableHotkeys) this.elements.settingEnableHotkeys.checked = !!(s && s.enableHotkeys);
+    const mode = (s && s.diffMode) || 'token';
+    const radios = document.querySelectorAll('input[name="settingDiffMode"]');
+    radios.forEach(r => { r.checked = (r.value === mode); });
+    if (this.elements.settingsModal) this.elements.settingsModal.style.display = 'block';
+    if (this.elements.settingsBackdrop) this.elements.settingsBackdrop.style.display = 'block';
+    document.body.classList.add('modal-open');
+};
+
+MarkdownCleanerApp.prototype.closeSettingsModal = function() {
+    if (this.elements.settingsModal) this.elements.settingsModal.style.display = 'none';
+    if (this.elements.settingsBackdrop) this.elements.settingsBackdrop.style.display = 'none';
+    document.body.classList.remove('modal-open');
+};
+
+MarkdownCleanerApp.prototype.saveSettings = function() {
+    const enableHotkeys = !!(this.elements.settingEnableHotkeys && this.elements.settingEnableHotkeys.checked);
+    const checked = document.querySelector('input[name="settingDiffMode"]:checked');
+    const diffMode = (checked && checked.value) || 'token';
+    this.state.settings = Object.assign({}, this.state.settings || {}, { enableHotkeys, diffMode });
+    Settings.save(this.state.settings);
+    if (window.SectionNav) SectionNav.updateHotkeys(this);
+    this.updateUI();
+    this.updateHotkeyHint();
+    this.updateStatus('设置已保存');
+    this.closeSettingsModal();
+};
+
+MarkdownCleanerApp.prototype.updateHotkeyHint = function() {
+    const enabled = !this.state.settings || this.state.settings.enableHotkeys;
+    const tb = this.elements.editorToolbar;
+    if (!tb) return;
+    let el = tb.querySelector('.hotkey-hint');
+    if (enabled) {
+        if (!el) {
+            el = document.createElement('span');
+            el.className = 'hotkey-hint';
+            el.textContent = 'Alt+↑/↓ 跳转板块';
+            el.style.marginLeft = 'auto';
+            el.style.opacity = '0.7';
+            el.style.fontSize = '12px';
+            tb.appendChild(el);
+        }
+    } else {
+        if (el) el.remove();
+    }
+};
+
+MarkdownCleanerApp.prototype.openExpertModal = function() {
+    if (this.elements.expertModal) this.elements.expertModal.style.display = 'block';
+    if (this.elements.expertBackdrop) this.elements.expertBackdrop.style.display = 'block';
+    document.body.classList.add('modal-open');
+};
+
+MarkdownCleanerApp.prototype.closeExpertModal = function() {
+    if (this.elements.expertModal) this.elements.expertModal.style.display = 'none';
+    if (this.elements.expertBackdrop) this.elements.expertBackdrop.style.display = 'none';
+    document.body.classList.remove('modal-open');
+};
+
+MarkdownCleanerApp.prototype.saveExpertRulesConfig = function() {
+    try {
+        const promptEl = document.getElementById('expertPrompt');
+        const prompt = (promptEl && promptEl.value || '').trim();
+        this.state.expertRules = { prompt };
+        this.updateStatus('专家规则已保存');
+    } catch (e) {
+        this.showError('保存失败: ' + e.message);
+    } finally {
+        this.closeExpertModal();
+    }
+};
+    MarkdownCleanerApp.prototype.openFindReplaceModal = function() {
+        if (this.elements.findReplaceModal) this.elements.findReplaceModal.style.display = 'block';
+        if (this.elements.findReplaceBackdrop) this.elements.findReplaceBackdrop.style.display = 'block';
+        document.body.classList.add('modal-open');
+    };
+
+    MarkdownCleanerApp.prototype.closeFindReplaceModal = function() {
+        if (this.elements.findReplaceModal) this.elements.findReplaceModal.style.display = 'none';
+        if (this.elements.findReplaceBackdrop) this.elements.findReplaceBackdrop.style.display = 'none';
+        document.body.classList.remove('modal-open');
+    };
+
+    MarkdownCleanerApp.prototype.handleReplaceAll = function() {
+        const find = (this.elements.findText?.value || '').trim();
+        const replace = this.elements.replaceText?.value || '';
+        const cs = !!(this.elements.findCaseSensitive && this.elements.findCaseSensitive.checked);
+        const useRegex = !!(this.elements.findUseRegex && this.elements.findUseRegex.checked);
+        if (!find) { this.showError('请输入查找内容'); return; }
+        try {
+            const content = this.elements.markdownEditor.value || '';
+            let out = content;
+            if (useRegex) {
+                const flags = cs ? 'g' : 'gi';
+                const re = new RegExp(find, flags);
+                out = out.replace(re, replace);
+            } else {
+                const src = cs ? content : content.toLowerCase();
+                const needle = cs ? find : find.toLowerCase();
+                if (cs) {
+                    out = out.split(find).join(replace);
+                } else {
+                    // 大小写不敏感替换：逐次查找替换
+                    let idx = 0; let buf = '';
+                    while (true) {
+                        const pos = src.indexOf(needle, idx);
+                        if (pos === -1) { buf += content.slice(idx); break; }
+                        buf += content.slice(idx, pos) + replace;
+                        idx = pos + needle.length;
+                    }
+                    out = buf;
+                }
+            }
+            this.state.processedContent = out;
+            this.elements.markdownEditor.value = out;
+            this.updateCompareView();
+            this.elements.compareTab.style.display = 'block';
+            this.switchTab('compare');
+            this.updateUI();
+            this.updateStatus('已完成替换全部');
+        } catch (e) {
+            this.showError('替换失败: ' + e.message);
+        } finally {
+            this.closeFindReplaceModal();
+        }
+    };
+
+    MarkdownCleanerApp.prototype.startInteractiveReplace = function() {
+        const find = (this.elements.findText?.value || '').trim();
+        const replace = this.elements.replaceText?.value || '';
+        const cs = !!(this.elements.findCaseSensitive && this.elements.findCaseSensitive.checked);
+        const useRegex = !!(this.elements.findUseRegex && this.elements.findUseRegex.checked);
+        if (!find) { this.showError('请输入查找内容'); return; }
+        this.state.findReplaceSession = { find, replace, cs, useRegex, index: 0 };
+        this.closeFindReplaceModal();
+        this.showNextMatch();
+    };
+
+    MarkdownCleanerApp.prototype.stopInteractiveReplace = function() {
+        this.state.findReplaceSession = null;
+        if (this.elements.interactivePanel) this.elements.interactivePanel.style.display = 'none';
+        if (this.elements.interactiveBackdrop) this.elements.interactiveBackdrop.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        this.updateStatus('已停止逐个替换');
+    };
+
+    MarkdownCleanerApp.prototype.findNextMatch = function(start) {
+        const s = this.state.findReplaceSession;
+        const content = this.elements.markdownEditor.value || '';
+        if (!s) return null;
+        if (s.useRegex) {
+            const flags = s.cs ? 'g' : 'gi';
+            const re = new RegExp(s.find, flags);
+            re.lastIndex = start || 0;
+            const m = re.exec(content);
+            if (!m) return null;
+            return { start: m.index, end: m.index + m[0].length };
+        } else {
+            const src = s.cs ? content : content.toLowerCase();
+            const needle = s.cs ? s.find : s.find.toLowerCase();
+            const pos = src.indexOf(needle, start || 0);
+            if (pos === -1) return null;
+            return { start: pos, end: pos + needle.length };
+        }
+    };
+
+    MarkdownCleanerApp.prototype.showNextMatch = function() {
+        const session = this.state.findReplaceSession;
+        if (!session) return;
+        const content = this.elements.markdownEditor.value || '';
+        const match = this.findNextMatch(session.index || 0);
+        if (!match) {
+            this.stopInteractiveReplace();
+            this.updateStatus('未找到更多匹配');
+            return;
+        }
+        this.elements.markdownEditor.focus();
+        this.elements.markdownEditor.setSelectionRange(match.start, match.end);
+        // 滚动到可视区域
+        const lines = content.slice(0, match.start).split(/\r?\n/);
+        const currentLine = lines.length;
+        this.elements.markdownEditor.scrollTop = this.elements.markdownEditor.scrollHeight * (currentLine / content.split(/\r?\n/).length);
+        // 打开面板
+        if (this.elements.interactivePanel) this.elements.interactivePanel.style.display = 'block';
+        if (this.elements.interactiveBackdrop) this.elements.interactiveBackdrop.style.display = 'block';
+        document.body.classList.add('modal-open');
+    };
+
+    MarkdownCleanerApp.prototype.replaceCurrentMatch = function() {
+        const s = this.state.findReplaceSession;
+        if (!s) return;
+        const content = this.elements.markdownEditor.value || '';
+        const match = this.findNextMatch(s.index || 0);
+        if (!match) { this.stopInteractiveReplace(); return; }
+        const out = content.slice(0, match.start) + s.replace + content.slice(match.end);
+        this.elements.markdownEditor.value = out;
+        this.state.processedContent = out;
+        // 更新起点到替换后位置
+        const nextStart = match.start + s.replace.length;
+        this.state.findReplaceSession.index = nextStart;
+        this.showNextMatch();
+    };
+
+    MarkdownCleanerApp.prototype.skipCurrentMatch = function() {
+        const s = this.state.findReplaceSession;
+        if (!s) return;
+        const match = this.findNextMatch(s.index || 0);
+        if (!match) { this.stopInteractiveReplace(); return; }
+        this.state.findReplaceSession.index = match.end;
+        this.showNextMatch();
+    };

@@ -8,6 +8,7 @@ const cors = require('cors');
 const TextProcessor = require('./utils/textProcessor');
 const Analyzer = require('./src/domain/analyzer');
 const Fixer = require('./src/domain/fixer');
+const AI = require('./src/domain/ai');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -191,6 +192,48 @@ app.post('/api/plan', async (req, res) => {
     } catch (error) {
         console.error('计划生成错误:', error);
         return res.status(500).json({ success: false, error: error.message || '计划生成失败' });
+    }
+});
+
+app.post('/api/preview-fixes', async (req, res) => {
+    try {
+        const { content, plan } = req.body;
+        if (!content) {
+            return res.status(400).json({ success: false, error: '请提供文本内容' });
+        }
+        const result = Fixer.previewFixes(content, plan || { selectedPriorities: [] });
+        return res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('预览生成错误:', error);
+        return res.status(500).json({ success: false, error: error.message || '预览生成失败' });
+    }
+});
+
+app.post('/api/ai/suggest', async (req, res) => {
+    try {
+        const { content, rules } = req.body;
+        if (!content) {
+            return res.status(400).json({ success: false, error: '请提供文本内容' });
+        }
+        const result = AI.suggest(content);
+        return res.json({ success: true, data: { ...result, rules: rules || {} } });
+    } catch (error) {
+        console.error('AI 建议错误:', error);
+        return res.status(500).json({ success: false, error: error.message || 'AI 建议生成失败' });
+    }
+});
+
+app.post('/api/ai/apply-bulk', async (req, res) => {
+    try {
+        const { content, mappings, sectionRange } = req.body;
+        if (!content || !Array.isArray(mappings)) {
+            return res.status(400).json({ success: false, error: '请提供文本内容与替代映射' });
+        }
+        const result = AI.applyBulk(content, mappings, sectionRange);
+        return res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('AI 批量应用错误:', error);
+        return res.status(500).json({ success: false, error: error.message || '批量应用失败' });
     }
 });
 

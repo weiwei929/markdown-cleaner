@@ -16,7 +16,26 @@
         </header>
 
         <!-- 主要内容区域 -->
-        <main class="main-content">
+        <div id="overviewPane" style="display:none;padding:20px;">
+            <div style="text-align:center;margin:20px 0;">
+                <h2>选择模式</h2>
+            </div>
+            <div style="display:flex;gap:24px;justify-content:center;">
+                <div id="cardBasic" style="border:1px solid #dee2e6;border-radius:12px;padding:24px;width:380px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+                    <h3 style="font-size:22px;color:#343a40;margin-bottom:8px;">基础版（Basic）</h3>
+                    <p style="color:#343a40;font-size:15px;line-height:1.7;margin:0;">规则化清理：格式/标点/繁简/断行/引号，一键修复</p>
+                </div>
+                <div id="cardExpert" style="border:1px solid #dee2e6;border-radius:12px;padding:24px;width:380px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+                    <h3 style="font-size:22px;color:#343a40;margin-bottom:8px;">AI 专家版（Expert）</h3>
+                    <p style="color:#343a40;font-size:15px;line-height:1.7;margin:0;">差错检查：专家规则、查找替换、候选修复预览</p>
+                </div>
+            </div>
+        </div>
+        <div id="modeBar" style="display:none;padding:8px 16px;background:#f8f9fa;border-bottom:1px solid #dee2e6;">
+            <span id="modeText">当前模式：</span>
+            <button class="btn-secondary" id="backToOverviewBtn" style="float:right;">返回总览</button>
+        </div>
+        <main class="main-content" id="mainContent">
             <!-- 左侧控制面板 -->
             <aside class="control-panel">
                 <!-- 文件上传区域 -->
@@ -47,10 +66,22 @@
                     <button class="btn-download" id="exportBtn" disabled>
                         💾 导出文件
                     </button>
+                    <button class="btn-secondary" id="expertRulesBtn" disabled>
+                        🧠 专家规则
+                    </button>
+                    <button class="btn-secondary" id="expertRunBtn" disabled>
+                        🚀 提交专家处理
+                    </button>
+                    <button class="btn-secondary" id="findReplaceBtn" disabled>
+                        🔍 查找替换
+                    </button>
+                    <button class="btn-secondary" id="settingsBtn">
+                        ⚙ 设置
+                    </button>
                 </div>
 
                 <!-- 修复选项 -->
-                <div class="options-section">
+                <div class="options-section" id="optionsSection">
                     <h3>🔧 修复选项</h3>
                     <div class="option-group">
                         <label class="option-item">
@@ -154,6 +185,22 @@
                 </div>
             </section>
         </main>
+        <div class="modal-backdrop" id="returnBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="returnModal" style="display:none;">
+            <div class="issues-header">
+                <h3>返回总览</h3>
+                <button class="btn-close-panel" id="closeReturnModal">×</button>
+            </div>
+            <div class="issues-list">
+                <div class="summary-line">是否保存当前内容为草稿？</div>
+                <div class="issues-actions" style="margin-top:10px;">
+                    <button class="btn-secondary" id="btnReturnSave">保存并返回</button>
+                    <button class="btn-secondary" id="btnReturnNoSave">直接返回</button>
+                    <button class="btn-secondary" id="btnReturnCancel">取消</button>
+                </div>
+                <div class="summary-line" id="returnSavingHint" style="display:none;color:#0d6efd;">请稍候，内容正在保存中……</div>
+            </div>
+        </div>
         <div class="issues-backdrop" id="issuesBackdrop" style="display:none;"></div>
         <div class="issues-panel" id="issuesPanel" style="display:none;">
             <div class="issues-header">
@@ -189,6 +236,91 @@
             </div>
         </div>
 
+        <!-- 设置弹窗 -->
+        <div class="modal-backdrop" id="settingsBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="settingsModal" style="display:none;">
+            <div class="issues-header">
+                <h3>设置</h3>
+                <button class="btn-close-panel" id="closeSettingsModal">×</button>
+            </div>
+            <div class="issues-list">
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                    <input type="checkbox" id="settingEnableHotkeys" /> 启用键盘快捷键（Alt+↑/↓ 跳转板块）
+                </label>
+                <div class="summary-line">差异高亮模式：</div>
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <input type="radio" name="settingDiffMode" value="line" /> 行级
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;">
+                    <input type="radio" name="settingDiffMode" value="token" /> 字词级
+                </label>
+                <div class="issues-actions" style="margin-top:10px;">
+                    <button class="btn-secondary" id="saveSettingsBtn">保存</button>
+                    <button class="btn-secondary" id="cancelSettingsBtn">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 专家版规则设定弹窗 -->
+        <div class="modal-backdrop" id="expertBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="expertModal" style="display:none;">
+            <div class="issues-header">
+                <h3>专家版规则设定（对话式）</h3>
+                <button class="btn-close-panel" id="closeExpertModal">×</button>
+            </div>
+            <div class="issues-list">
+                <div class="summary-line">说明：请输入需要修复的内容与方式（如：错别字、语法风格、术语统一）。</div>
+                <textarea id="expertPrompt" style="width:100%;height:160px;border:1px solid #dee2e6;border-radius:6px;padding:8px;" placeholder="示例：请纠正错别字，不改变段落结构与 Markdown 语法。"></textarea>
+                <div class="issues-actions" style="margin-top:10px;">
+                    <button class="btn-secondary" id="saveExpertRules">保存规则</button>
+                    <button class="btn-secondary" id="cancelExpertRules">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 查找替换弹窗 -->
+        <div class="modal-backdrop" id="findReplaceBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="findReplaceModal" style="display:none;">
+            <div class="issues-header">
+                <h3>查找替换</h3>
+                <button class="btn-close-panel" id="closeFindReplaceModal">×</button>
+            </div>
+            <div class="issues-list">
+                <div class="summary-line">查找：</div>
+                <input id="findText" type="text" style="width:100%;padding:8px;border:1px solid #dee2e6;border-radius:6px;margin-bottom:8px;" />
+                <div class="summary-line">替换为：</div>
+                <input id="replaceText" type="text" style="width:100%;padding:8px;border:1px solid #dee2e6;border-radius:6px;margin-bottom:8px;" />
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <input type="checkbox" id="findCaseSensitive" /> 区分大小写
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                    <input type="checkbox" id="findUseRegex" /> 使用正则表达式
+                </label>
+                <div class="issues-actions" style="margin-top:10px;">
+                    <button class="btn-secondary" id="btnReplaceAll">替换全部</button>
+                    <button class="btn-secondary" id="btnStartInteractive">逐个替换</button>
+                    <button class="btn-secondary" id="cancelFindReplace">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 逐个替换面板 -->
+        <div class="modal-backdrop" id="interactiveBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="interactivePanel" style="display:none;max-width:720px;">
+            <div class="issues-header">
+                <h3>逐个替换</h3>
+                <button class="btn-close-panel" id="closeInteractivePanel">×</button>
+            </div>
+            <div class="issues-list" id="interactiveContent">
+                <div class="summary-line">当前匹配位置将高亮于编辑器中。</div>
+                <div class="issues-actions" style="margin-top:10px;">
+                    <button class="btn-secondary" id="btnReplaceCurrent">替换</button>
+                    <button class="btn-secondary" id="btnSkipCurrent">跳过</button>
+                    <button class="btn-secondary" id="btnStopInteractive">停止</button>
+                </div>
+            </div>
+        </div>
+
         <div class="modal-backdrop" id="planBackdrop" style="display:none;"></div>
         <div class="modal-panel" id="planModal" style="display:none;">
             <div class="issues-header">
@@ -207,6 +339,9 @@
     <!-- Scripts -->
     <script src="/lib/marked/marked.min.js"></script>
     <script src="js/linter.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/planModal.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/app.js?v=ui2"></script>
 </body>
 </html>

@@ -618,6 +618,27 @@ body.modal-open { overflow: hidden; }
     color: #333;
 }
 
+.diff-add {
+    background: #e8f5e8;
+    border-left: 4px solid #2ecc71;
+}
+
+.diff-del {
+    background: #fdecea;
+    border-left: 4px solid #e74c3c;
+}
+
+.diff-add-inline { background: #f0fff0; }
+.diff-del-inline { background: #fff0f0; }
+.kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background: #f8f9fa;
+    font-size: 12px;
+}
+
 /* 响应式设计 */
 @media (max-width: 1024px) {
     .main-content {
@@ -632,7 +653,7 @@ body.modal-open { overflow: hidden; }
 
 @media (max-width: 768px) {
     .main-content {
-        grid-template-columns: 1fr;
+        grid-template-columns: 280px 1fr;
         gap: 15px;
     }
     
