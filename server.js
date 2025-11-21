@@ -6,6 +6,8 @@ const cors = require('cors');
 
 // 导入文本处理模块
 const TextProcessor = require('./utils/textProcessor');
+const Analyzer = require('./src/domain/analyzer');
+const Fixer = require('./src/domain/fixer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +19,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // 静态文件服务
 app.use(express.static(path.join(__dirname, 'public')));
+// 标记库静态服务（避免 CDN 失败）
+app.use('/lib/marked', express.static(path.join(__dirname, 'node_modules', 'marked')));
+// favicon 占位，避免 404 警告
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // 配置文件上传
 const storage = multer.memoryStorage();
@@ -66,20 +72,7 @@ app.post('/api/process', upload.single('file'), async (req, res) => {
         const originalContent = req.file.buffer.toString('utf-8');
         
         // 处理文本
-        console.log('处理选项:', options);
-        console.log('原始内容长度:', originalContent.length);
         const processedContent = await textProcessor.processText(originalContent, options);
-        console.log('处理后内容长度:', processedContent.length);
-        
-        // 调试引号处理
-        const originalQuotes = [...originalContent].filter(char => 
-            [34, 8220, 8221, 12300, 12301, 12302, 12303].includes(char.charCodeAt(0))
-        );
-        const processedQuotes = [...processedContent].filter(char => 
-            [34, 8220, 8221, 12300, 12301, 12302, 12303].includes(char.charCodeAt(0))
-        );
-        console.log('原始引号:', originalQuotes.map(c => ({char: c, code: c.charCodeAt(0)})));
-        console.log('处理后引号:', processedQuotes.map(c => ({char: c, code: c.charCodeAt(0)})));
         
         // 生成处理报告
         const report = textProcessor.generateReport(originalContent, processedContent);
@@ -141,6 +134,63 @@ app.post('/api/process-text', async (req, res) => {
             success: false,
             error: error.message || '文本处理失败'
         });
+    }
+});
+
+app.post('/api/analyze', async (req, res) => {
+    try {
+        const { content } = req.body;
+        if (!content) {
+            return res.status(400).json({ success: false, error: '请提供文本内容' });
+        }
+        const result = Analyzer.analyze(content);
+        return res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('分析错误:', error);
+        return res.status(500).json({ success: false, error: error.message || '分析失败' });
+    }
+});
+
+app.post('/api/apply-fixes', async (req, res) => {
+    try {
+        const { content, plan } = req.body;
+        if (!content) {
+            return res.status(400).json({ success: false, error: '请提供文本内容' });
+        }
+        const result = Fixer.applyFixes(content, plan || { selectedPriorities: [] });
+        return res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('修复应用错误:', error);
+        return res.status(500).json({ success: false, error: error.message || '修复应用失败' });
+    }
+});
+
+app.post('/api/plan', async (req, res) => {
+    try {
+        const { content, selectedPriorities, sectionRange } = req.body;
+        if (!content) {
+            return res.status(400).json({ success: false, error: '请提供文本内容' });
+        }
+        const analysis = Analyzer.analyze(content);
+        let counts = analysis.grouped;
+        let scope = 'global';
+        if (sectionRange && Number.isInteger(sectionRange.start) && Number.isInteger(sectionRange.end)) {
+            scope = 'section';
+            const lines = content.split(/\r?\n/);
+            const slice = lines.slice(sectionRange.start, sectionRange.end + 1).join('\n');
+            const local = Analyzer.analyze(slice);
+            counts = local.grouped;
+        }
+        const sel = selectedPriorities || [];
+        const estimate = {
+            safe: sel.includes('SAFE') ? (counts.SAFE ? counts.SAFE.length : 0) : 0,
+            suggested: sel.includes('SUGGESTED') ? (counts.SUGGESTED ? counts.SUGGESTED.length : 0) : 0,
+            warning: sel.includes('WARNING') ? (counts.WARNING ? counts.WARNING.length : 0) : 0
+        };
+        return res.json({ success: true, data: { scope, sectionRange, selectedPriorities: sel, estimate } });
+    } catch (error) {
+        console.error('计划生成错误:', error);
+        return res.status(500).json({ success: false, error: error.message || '计划生成失败' });
     }
 });
 

@@ -80,12 +80,11 @@ class TextProcessor {
     mergeBrokenLines(text) {
         const lines = text.split('\n');
         const mergedLines = [];
-        
-        // Markdown 块级元素特征
-        const blockPattern = /^(#+ |- |\* |\d+\. |> |```|---|\*\*\*)/;
+        const hrPattern = /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/;
+        const headingOrBlock = /^(#{1,6})(?:\s|$)|^\s*(?:[-*+]\s|\d+\.\s|>)|^\s*```/;
         
         for (let i = 0; i < lines.length; i++) {
-            let currentLine = lines[i].trimEnd(); // 保留前面的缩进，只去除尾部空格
+            let currentLine = lines[i].trimEnd();
             
             // 如果是最后一行，直接添加
             if (i === lines.length - 1) {
@@ -104,8 +103,10 @@ class TextProcessor {
             // 5. 当前行不以两个以上空格结尾（Markdown 换行语法）
             if (currentLine.trim().length > 0 && 
                 nextLine.trim().length > 0 && 
-                !blockPattern.test(currentLine.trim()) && 
-                !blockPattern.test(nextLine.trim()) &&
+                !headingOrBlock.test(currentLine.trim()) && 
+                !headingOrBlock.test(nextLine.trim()) &&
+                !hrPattern.test(currentLine.trim()) &&
+                !hrPattern.test(nextLine.trim()) &&
                 !currentLine.endsWith('  ')) {
                 
                 // 决定连接符
@@ -137,13 +138,14 @@ class TextProcessor {
         // 重新实现逻辑：
         let resultLines = [];
         let buffer = '';
+        let inCode = false;
         
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trimEnd(); // 去除尾部空格
             let trimmedLine = line.trim();
             
             // 如果是空行或块级元素，先处理缓冲区，然后添加当前行
-            if (trimmedLine.length === 0 || blockPattern.test(trimmedLine)) {
+            if (trimmedLine.length === 0 || headingOrBlock.test(trimmedLine) || hrPattern.test(trimmedLine)) {
                 if (buffer) {
                     resultLines.push(buffer);
                     buffer = '';
@@ -351,21 +353,21 @@ class TextProcessor {
     /**
      * 修复空格问题
      */
-    fixSpacing(line) {
-        let result = line;
-        
-        // 中英文之间添加空格
-        result = result.replace(/([\u4e00-\u9fff])([a-zA-Z0-9])/g, '$1 $2');
-        result = result.replace(/([a-zA-Z0-9])([\u4e00-\u9fff])/g, '$1 $2');
-        
-        // 中文和符号之间的空格处理
-        result = result.replace(/([\u4e00-\u9fff])\s+([，。！？：；）】"])/g, '$1$2');
-        result = result.replace(/([（【"])\s+([\u4e00-\u9fff])/g, '$1$2');
-        
-        // 清理多余的空格
-        result = result.replace(/\s{2,}/g, ' ');
-        
-        return result;
+    fixSpacing(text) {
+        const lines = text.split(/\r?\n/);
+        const processed = lines.map((line) => {
+            let result = line;
+            result = result.replace(/([\u4e00-\u9fff])([a-zA-Z0-9])/g, '$1 $2');
+            result = result.replace(/([a-zA-Z0-9])([\u4e00-\u9fff])/g, '$1 $2');
+            result = result.replace(/([\u4e00-\u9fff])[ \t]+([，。！？：；）】"])/g, '$1$2');
+            result = result.replace(/([（【"])\s+([\u4e00-\u9fff])/g, '$1$2');
+            // 仅清理空格与制表符，不影响换行（避免 CRLF 被压缩为单空格）
+            result = result.replace(/[ \t]{2,}/g, ' ');
+            return result;
+        });
+        // 保留原始换行风格（优先 CRLF）
+        const newline = /\r\n/.test(text) ? '\r\n' : '\n';
+        return processed.join(newline);
     }
 
     /**

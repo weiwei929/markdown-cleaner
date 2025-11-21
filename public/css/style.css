@@ -11,6 +11,7 @@ body {
     min-height: 100vh;
     color: #333;
 }
+body.modal-open { overflow: hidden; }
 
 /* 容器布局 */
 .container {
@@ -49,7 +50,7 @@ body {
 /* 主内容区域 */
 .main-content {
     display: grid;
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: 340px 1fr;
     gap: 25px;
     flex: 1;
     align-items: start;
@@ -334,7 +335,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.18);
     display: flex;
     flex-direction: column;
-    min-height: 600px;
+    min-height: 720px;
 }
 
 .editor-header {
@@ -388,6 +389,10 @@ body {
 
 .editor-pane.active, .preview-pane.active, .compare-pane.active {
     display: flex;
+}
+
+.editor-pane.active {
+    padding: 16px;
 }
 
 /* 工具栏样式 */
@@ -461,6 +466,18 @@ body {
     padding: 20px;
     overflow-y: auto;
     background: white;
+}
+
+/* 编辑器文本域尺寸优化 */
+#markdownEditor {
+    flex: 1;
+    min-height: 520px;
+    width: 100%;
+    resize: vertical;
+    padding: 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #fff;
 }
 
 .preview-placeholder {
@@ -684,11 +701,21 @@ body {
 /* 问题面板样式 */
 .issues-panel {
     background: #fff;
-    border-top: 1px solid #dee2e6;
-    height: 200px;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 720px;
+    max-width: calc(100% - 40px);
+    max-height: 70vh;
+    overflow: auto;
+    overscroll-behavior: contain;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+    border-radius: 12px;
+    border: 1px solid #dee2e6;
+    z-index: 1001;
 }
 
 .issues-header {
@@ -719,7 +746,7 @@ body {
 .issues-list {
     flex: 1;
     overflow-y: auto;
-    padding: 0;
+    padding: 15px;
 }
 
 .issue-item {
@@ -777,6 +804,42 @@ body {
     color: white;
 }
 
+.issues-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+}
+
+.issues-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.summary-line {
+    font-size: 0.95em;
+    color: #495057;
+}
+
+.summary-list {
+    margin-left: 18px;
+    color: #6c757d;
+    line-height: 1.6;
+}
+
+.issues-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.issues-actions .btn-secondary {
+    padding: 10px 12px;
+}
+
 /* CodeMirror Linter 标记样式 */
 .lint-mark-warning {
     border-bottom: 2px wavy #f39c12;
@@ -791,4 +854,29 @@ body {
 .lint-mark-info {
     border-bottom: 2px wavy #3498db;
     background-color: rgba(52, 152, 219, 0.1);
+}
+.modal-panel {
+    background: #fff;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 560px;
+    max-width: calc(100% - 40px);
+    max-height: 60vh;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+    border-radius: 12px;
+    border: 1px solid #dee2e6;
+    z-index: 1001;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
 }

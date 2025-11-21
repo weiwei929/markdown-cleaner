@@ -32,7 +32,7 @@ class MarkdownCleanerApp {
             this.initEditor();
             this.updateUI();
             
-            console.log('📝 MarkDown 清理工具已初始化');
+            
         } catch (error) {
             console.error('应用初始化失败:', error);
             this.showError('应用初始化失败，请刷新页面重试');
@@ -59,8 +59,8 @@ class MarkdownCleanerApp {
             
             // 操作按钮
             processBtn: document.getElementById('processBtn'),
-            previewBtn: document.getElementById('previewBtn'),
-            downloadBtn: document.getElementById('downloadBtn'),
+            exportBtn: document.getElementById('exportBtn'),
+            analyzeBtn: document.getElementById('analyzeBtn'),
             resetBtn: document.getElementById('resetBtn'),
             
             // 状态显示
@@ -83,6 +83,22 @@ class MarkdownCleanerApp {
             originalContent: document.getElementById('originalContent'),
             processedContent: document.getElementById('processedContent')
         };
+        this.elements.issuesPanel = document.getElementById('issuesPanel');
+        this.elements.issuesList = document.getElementById('issuesList');
+        this.elements.closeIssuesPanel = document.getElementById('closeIssuesPanel');
+        this.elements.exportModal = document.getElementById('exportModal');
+        this.elements.exportBackdrop = document.getElementById('exportBackdrop');
+        this.elements.exportFileName = document.getElementById('exportFileName');
+        this.elements.confirmExport = document.getElementById('confirmExport');
+        this.elements.cancelExport = document.getElementById('cancelExport');
+        this.elements.closeExportModal = document.getElementById('closeExportModal');
+        this.elements.planModal = document.getElementById('planModal');
+        this.elements.planBackdrop = document.getElementById('planBackdrop');
+        this.elements.planContent = document.getElementById('planContent');
+        this.elements.closePlanModal = document.getElementById('closePlanModal');
+        this.elements.btnApplySafePlan = document.getElementById('btnApplySafePlan');
+        this.elements.btnApplySuggestedPlan = document.getElementById('btnApplySuggestedPlan');
+        this.elements.btnExportPlanJson = document.getElementById('btnExportPlanJson');
     }
 
     /**
@@ -127,16 +143,40 @@ class MarkdownCleanerApp {
             this.processFile();
         });
 
-        this.elements.previewBtn.addEventListener('click', () => {
-            this.togglePreview();
-        });
-
-        this.elements.downloadBtn.addEventListener('click', () => {
-            this.downloadFile();
+        this.elements.exportBtn.addEventListener('click', () => {
+            this.openExportModal();
         });
 
         this.elements.resetBtn.addEventListener('click', () => {
             this.resetToOriginal();
+        });
+
+        this.elements.analyzeBtn.addEventListener('click', () => {
+            this.analyzeContent();
+        });
+        this.elements.closeIssuesPanel.addEventListener('click', () => {
+            this.closeIssuesPanel();
+        });
+        this.elements.confirmExport.addEventListener('click', () => {
+            this.handleExportConfirm();
+        });
+        this.elements.cancelExport.addEventListener('click', () => {
+            this.closeExportModal();
+        });
+        this.elements.closeExportModal.addEventListener('click', () => {
+            this.closeExportModal();
+        });
+        this.elements.closePlanModal.addEventListener('click', () => {
+            this.closePlanModal();
+        });
+        this.elements.btnApplySafePlan.addEventListener('click', () => {
+            this.applySafePlan();
+        });
+        this.elements.btnApplySuggestedPlan.addEventListener('click', () => {
+            this.applySuggestedPlan();
+        });
+        this.elements.btnExportPlanJson.addEventListener('click', () => {
+            this.exportPlanJson();
         });
 
         // 标签页切换
@@ -181,7 +221,7 @@ class MarkdownCleanerApp {
             });
         }
         
-        console.log('编辑器已初始化');
+        
     }
 
     /**
@@ -221,8 +261,10 @@ class MarkdownCleanerApp {
             this.elements.fileInfo.style.display = 'flex';
             this.elements.markdownEditor.value = content;
             
-            this.updateUI();
-            this.updateStatus('文件已加载，可以开始处理');
+        this.updateUI();
+        this.updateStatus('文件已加载，可以开始处理');
+        await this.analyzeContent();
+        this.openIssuesPanel();
             
         } catch (error) {
             console.error('文件读取失败:', error);
@@ -323,7 +365,7 @@ class MarkdownCleanerApp {
             this.updateUI();
             this.updateStatus(`处理完成 - 修改了 ${result.data.report.changes.modifiedLines} 行`);
             
-            console.log('处理报告:', result.data.report);
+            
             
         } catch (error) {
             console.error('文件处理失败:', error);
@@ -528,8 +570,8 @@ class MarkdownCleanerApp {
         
         // 更新按钮状态
         this.elements.processBtn.disabled = !hasFile || this.state.isProcessing;
-        this.elements.previewBtn.disabled = !hasFile;
-        this.elements.downloadBtn.style.display = hasFile ? 'block' : 'none';
+        this.elements.analyzeBtn.disabled = !hasFile;
+        this.elements.exportBtn.disabled = !hasFile;
         this.elements.resetBtn.disabled = !hasFile;
 
         // 更新按钮文本
@@ -539,12 +581,322 @@ class MarkdownCleanerApp {
             this.elements.processBtn.textContent = '⚡ 一键修复';
         }
 
-        // 更新预览按钮文本
-        if (this.state.activeTab === 'preview') {
-            this.elements.previewBtn.textContent = '📝 返回编辑';
-        } else {
-            this.elements.previewBtn.textContent = '👁️ 预览效果';
+        
+    }
+
+    async analyzeContent() {
+        const content = this.elements.markdownEditor.value || '';
+        if (!content.trim()) {
+            this.showError('请先输入或导入内容');
+            return;
         }
+        try {
+            this.updateStatus('正在检查...');
+            const resp = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content })
+            });
+            const result = await resp.json();
+            if (!result.success) throw new Error(result.error || '分析失败');
+            this.state.lastAnalyzeData = result.data;
+            this.renderIssues(result.data);
+            this.openIssuesPanel();
+            this.updateStatus('检查完成');
+        } catch (e) {
+            this.showError('分析失败: ' + e.message);
+        }
+    }
+
+    renderIssues(data) {
+        data = data || this.state.lastAnalyzeData || { grouped: { SAFE: [], SUGGESTED: [], WARNING: [] }, stats: { total: 0, safe: 0, suggested: 0, warning: 0 } };
+        const list = this.elements.issuesList;
+        const grouped = data.grouped || { SAFE: [], SUGGESTED: [], WARNING: [] };
+        const stats = data.stats || {
+            total: (grouped.SAFE.length + grouped.SUGGESTED.length + grouped.WARNING.length),
+            safe: grouped.SAFE.length,
+            suggested: grouped.SUGGESTED.length,
+            warning: grouped.WARNING.length
+        };
+
+        const hasSafe = stats.safe > 0;
+        const hasSuggested = stats.suggested > 0;
+        const hasWarning = stats.warning > 0;
+
+        let html = '';
+        html += `<div class="issues-summary">`;
+        html += `<div class="summary-line">总计问题：<strong>${stats.total}</strong></div>`;
+        html += `<div class="summary-line">安全修复：<strong>${stats.safe}</strong> · 建议修复：<strong>${stats.suggested}</strong> · 警告：<strong>${stats.warning}</strong></div>`;
+        const st = (this.state.lastAnalyzeData && this.state.lastAnalyzeData.structure) || this.parseOutlineFromContent();
+        if (st) {
+            const outline = st.outline || [];
+            html += `<div class="summary-line">结构大纲（#/## 行首）：</div>`;
+            html += `<ul class="summary-list">` + (outline.length ? outline.map(h => `<li>${'#'.repeat(h.level)} ${h.text || '(空)'} · 行 ${h.lineStart + 1}</li>`).join('') : '<li>未检测到标题</li>') + `</ul>`;
+            const sections = st.sections || [];
+            if (sections.length) {
+                html += `<div class="summary-line">分板块统计：</div>`;
+                html += `<ul class="summary-list">` + sections.map((sec, i) => `<li>${'#'.repeat(sec.level)} ${sec.heading || '(空)'} · 行 ${sec.range.start + 1}-${sec.range.end + 1} · 安全:${sec.stats?.safe ?? 0} 建议:${sec.stats?.suggested ?? 0} 警告:${sec.stats?.warning ?? 0} <button class='btn-secondary' data-sec='${i}' id='btnViewSection_${i}'>查看该板块建议</button> <button class='btn-secondary' data-sec='${i}' id='btnPlanSection_${i}'>生成修复计划</button></li>`).join('') + `</ul>`;
+            }
+        }
+        html += `<div class="summary-suggest">`;
+        html += `<p>建议：</p>`;
+        html += `<ul class="summary-list">`;
+        html += hasSafe ? `<li>可一键应用安全修复，默认零误伤</li>` : '';
+        html += hasSuggested ? `<li>建议修复项请逐条审阅后再应用</li>` : '';
+        html += hasWarning ? `<li>警告项不自动修改，可结合 AI 建议处理</li>` : '';
+        if (!hasSafe && !hasSuggested && !hasWarning) {
+            html += `<li>未发现需要修复的问题</li>`;
+        }
+        html += `</ul>`;
+        html += `</div>`;
+        html += `<div class="issues-actions">`;
+        html += `<button class="btn-secondary" id="btnViewSafe">查看安全修复建议 (${stats.safe})</button>`;
+        html += `<button class="btn-secondary" id="btnViewSuggested">查看建议修复 (${stats.suggested})</button>`;
+        html += `<button class="btn-secondary" id="btnViewWarning">查看警告说明 (${stats.warning})</button>`;
+        html += `<button class="btn-secondary" id="btnPlanGlobal">生成全局修复计划</button>`;
+        html += `</div>`;
+        html += `</div>`;
+
+        list.innerHTML = html;
+        this.bindIssueSummaryActions(grouped);
+        this.bindSectionActions();
+    }
+
+    openIssuesPanel() {
+        this.elements.issuesPanel.style.display = 'block';
+        const backdrop = document.getElementById('issuesBackdrop');
+        if (backdrop) backdrop.style.display = 'block';
+        document.body.classList.add('modal-open');
+    }
+
+    closeIssuesPanel() {
+        this.elements.issuesPanel.style.display = 'none';
+        const backdrop = document.getElementById('issuesBackdrop');
+        if (backdrop) backdrop.style.display = 'none';
+        document.body.classList.remove('modal-open');
+    }
+
+    bindIssueSummaryActions(grouped) {
+        const safeBtn = document.getElementById('btnViewSafe');
+        const sugBtn = document.getElementById('btnViewSuggested');
+        const warnBtn = document.getElementById('btnViewWarning');
+        const planGlobalBtn = document.getElementById('btnPlanGlobal');
+        if (safeBtn) safeBtn.onclick = () => this.renderCategoryView('SAFE', grouped);
+        if (sugBtn) sugBtn.onclick = () => this.renderCategoryView('SUGGESTED', grouped);
+        if (warnBtn) warnBtn.onclick = () => this.renderCategoryView('WARNING', grouped);
+        if (planGlobalBtn) planGlobalBtn.onclick = () => this.requestPlanGlobal();
+    }
+
+    bindSectionActions() {
+        const st = (this.state.lastAnalyzeData && this.state.lastAnalyzeData.structure) || this.parseOutlineFromContent();
+        if (!st) return;
+        const sections = st.sections || [];
+        sections.forEach((sec, i) => {
+            const btnView = document.getElementById(`btnViewSection_${i}`);
+            const btnPlan = document.getElementById(`btnPlanSection_${i}`);
+            if (btnView) btnView.onclick = () => this.renderSectionView(sec);
+            if (btnPlan) btnPlan.onclick = () => this.requestPlanForSection(sec);
+        });
+    }
+
+    renderSectionView(sec) {
+        const grouped = { SAFE: [], SUGGESTED: [], WARNING: [] };
+        const issues = sec.sampleIssues || [];
+        issues.forEach(it => {
+            if (it.code === 'broken-line') grouped.SUGGESTED.push(it);
+            else if (it.code === 'missing-space' || it.code === 'indent-style' || it.code === 'mixed-punc') grouped.SAFE.push(it);
+            else grouped.WARNING.push(it);
+        });
+        const list = this.elements.issuesList;
+        const title = `${'#'.repeat(sec.level)} ${sec.heading || '(空)'} · 行 ${sec.range.start + 1}-${sec.range.end + 1}`;
+        let html = `<div class='issues-summary'><div class='summary-line'><strong>${title}</strong></div>`;
+        html += `<div class='summary-line'>安全:${grouped.SAFE.length} 建议:${grouped.SUGGESTED.length} 警告:${grouped.WARNING.length}</div></div>`;
+        const samples = issues.slice(0, 20).map(it => `<div class='issue-item ${it.type}'><span class='issue-icon'>${this.getTypeIcon(it.type)}</span><div class='issue-message'>第${it.line + 1}行 · ${it.message}</div></div>`).join('');
+        html += samples ? `<div style='margin-top:10px;'>示例（最多显示20条）：</div>${samples}` : '';
+        html += `<div class='issues-actions'><button class='btn-secondary' id='btnBackSummary'>返回摘要</button> <button class='btn-secondary' id='btnJumpToSection'>跳转到板块起始</button> <button class='btn-secondary' id='btnJumpToSectionEnd'>跳转到板块末尾</button></div>`;
+        list.innerHTML = html;
+        const backBtn = document.getElementById('btnBackSummary');
+        if (backBtn) backBtn.onclick = () => this.renderIssues(this.state.lastAnalyzeData);
+        const jumpBtn = document.getElementById('btnJumpToSection');
+        if (jumpBtn) jumpBtn.onclick = () => this.jumpToLine(sec.range.start + 1);
+        const jumpEndBtn = document.getElementById('btnJumpToSectionEnd');
+        if (jumpEndBtn) jumpEndBtn.onclick = () => this.jumpToLine(sec.range.end + 1);
+    }
+
+    async requestPlanForSection(sec) {
+        try {
+            const content = this.elements.markdownEditor.value || '';
+            const resp = await fetch('/api/plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content, selectedPriorities: ['SAFE','SUGGESTED'], sectionRange: sec.range })
+            });
+            const result = await resp.json();
+            if (!result.success) throw new Error(result.error || '计划生成失败');
+            this.openPlanModal(result.data, sec);
+        } catch (e) {
+            this.showError('计划生成失败: ' + e.message);
+        }
+    }
+    async requestPlanGlobal() {
+        try {
+            const content = this.elements.markdownEditor.value || '';
+            const resp = await fetch('/api/plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content, selectedPriorities: ['SAFE','SUGGESTED'] })
+            });
+            const result = await resp.json();
+            if (!result.success) throw new Error(result.error || '计划生成失败');
+            const sec = { heading: '全局', level: 1, range: { start: 0, end: (this.elements.markdownEditor.value.split(/\r?\n/).length - 1) } };
+            this.openPlanModal(result.data, sec);
+        } catch (e) {
+            this.showError('计划生成失败: ' + e.message);
+        }
+    }
+
+    openPlanModal(data, sec) {
+        const el = this.elements.planContent;
+        const title = `${'#'.repeat(sec.level)} ${sec.heading || '(空)'} · 行 ${sec.range.start + 1}-${sec.range.end + 1}`;
+        let html = `<div class='issues-summary'><div class='summary-line'><strong>修复计划</strong></div>`;
+        html += `<div class='summary-line'>范围：${data.scope === 'section' ? title : '全局'}</div>`;
+        html += `<div class='summary-line'>选择优先级：${(data.selectedPriorities || []).join(', ') || '无'}</div>`;
+        html += `<div class='summary-line'>估算：安全 ${data.estimate.safe} · 建议 ${data.estimate.suggested} · 警告 ${data.estimate.warning}</div>`;
+        html += `</div>`;
+        el.innerHTML = html;
+        // 缓存当前计划
+        this.state.lastPlanData = data;
+        this.state.lastPlanSection = sec;
+        this.elements.planModal.style.display = 'block';
+        this.elements.planBackdrop.style.display = 'block';
+        document.body.classList.add('modal-open');
+    }
+
+    closePlanModal() {
+        this.elements.planModal.style.display = 'none';
+        this.elements.planBackdrop.style.display = 'none';
+        document.body.classList.remove('modal-open');
+    }
+
+    async applySafePlan() {
+        try {
+            const content = this.elements.markdownEditor.value || '';
+            const sec = this.state.lastPlanSection;
+            if (!sec) {
+                this.showError('无可应用的板块范围');
+                return;
+            }
+            const resp = await fetch('/api/apply-fixes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content, plan: { selectedPriorities: ['SAFE'], sectionRange: sec.range } })
+            });
+            const result = await resp.json();
+            if (!result.success) throw new Error(result.error || '应用失败');
+            // 更新编辑器内容与视图
+            this.state.processedContent = result.data.text;
+            this.elements.markdownEditor.value = this.state.processedContent;
+            this.updateCompareView();
+            this.elements.compareTab.style.display = 'block';
+            this.switchTab('compare');
+            this.updateUI();
+            this.updateStatus('已应用 SAFE 到该板块');
+        } catch (e) {
+            this.showError('应用失败: ' + e.message);
+        } finally {
+            this.closePlanModal();
+        }
+    }
+
+    async applySuggestedPlan() {
+        try {
+            const content = this.elements.markdownEditor.value || '';
+            const sec = this.state.lastPlanSection;
+            if (!sec) {
+                this.showError('无可应用的板块范围');
+                return;
+            }
+            const confirmed = window.confirm('应用建议修复可能影响排版，确认仅对该板块应用吗？');
+            if (!confirmed) return;
+            const resp = await fetch('/api/apply-fixes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content, plan: { selectedPriorities: ['SUGGESTED'], sectionRange: sec.range } })
+            });
+            const result = await resp.json();
+            if (!result.success) throw new Error(result.error || '应用失败');
+            this.state.processedContent = result.data.text;
+            this.elements.markdownEditor.value = this.state.processedContent;
+            this.updateCompareView();
+            this.elements.compareTab.style.display = 'block';
+            this.switchTab('compare');
+            this.updateUI();
+            this.updateStatus('已应用 SUGGESTED 到该板块');
+        } catch (e) {
+            this.showError('应用失败: ' + e.message);
+        } finally {
+            this.closePlanModal();
+        }
+    }
+
+    exportPlanJson() {
+        try {
+            const data = this.state.lastPlanData;
+            const sec = this.state.lastPlanSection;
+            if (!data || !sec) {
+                this.showError('无可导出的计划');
+                return;
+            }
+            const planJson = {
+                section: { heading: sec.heading, level: sec.level, range: sec.range },
+                selectedPriorities: data.selectedPriorities,
+                estimate: data.estimate
+            };
+            const blob = new Blob([JSON.stringify(planJson, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'fix-plan.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+            this.updateStatus('修复计划 JSON 已导出');
+        } catch (e) {
+            this.showError('导出失败: ' + e.message);
+        }
+    }
+
+    renderCategoryView(kind, grouped) {
+        const list = this.elements.issuesList;
+        const arr = grouped[kind] || [];
+        const titleMap = { SAFE: '安全修复', SUGGESTED: '建议修复', WARNING: '警告说明' };
+        const title = titleMap[kind] || kind;
+        const byCode = {};
+        for (const it of arr) {
+            const c = it.code || 'unknown';
+            byCode[c] = (byCode[c] || 0) + 1;
+        }
+        const codesHtml = Object.keys(byCode).length
+            ? Object.keys(byCode).map(c => `<li>${c}：${byCode[c]}</li>`).join('')
+            : '<li>暂无该类别问题</li>';
+        const samples = arr.slice(0, 20).map(it => `<div class="issue-item ${it.type}"><span class="issue-icon">${this.getTypeIcon(it.type)}</span><div class="issue-message">第${it.line + 1}行 · ${it.message}</div></div>`).join('');
+        let guide = '';
+        if (kind === 'SAFE') guide = '此类修复默认安全，可在后续按优先级一键应用。';
+        if (kind === 'SUGGESTED') guide = '此类修复可能影响排版，建议逐条审阅后选择应用。';
+        if (kind === 'WARNING') guide = '此类为高风险改动，建议结合 AI 建议与人工确认后处理。';
+        let html = '';
+        html += `<div class="issues-summary">`;
+        html += `<div class="summary-line"><strong>${title}</strong> · 数量：${arr.length}</div>`;
+        html += `<div class="summary-line">规则分布：</div>`;
+        html += `<ul class="summary-list">${codesHtml}</ul>`;
+        html += `<div class="summary-line">说明：${guide}</div>`;
+        html += `</div>`;
+        html += samples ? `<div style="margin-top:10px;">示例（最多显示20条）：</div>${samples}` : '';
+        html += `<div class="issues-actions"><button class="btn-secondary" id="btnBackSummary">返回摘要</button></div>`;
+        list.innerHTML = html;
+        const backBtn = document.getElementById('btnBackSummary');
+        if (backBtn) backBtn.onclick = () => this.renderIssues(this.state.lastAnalyzeData);
     }
 
     /**
@@ -573,7 +925,99 @@ class MarkdownCleanerApp {
     }
 }
 
+// 导出弹窗与保存逻辑
+MarkdownCleanerApp.prototype.openExportModal = function() {
+    const defaultName = this.state.currentFile ? this.state.currentFile.name.replace(/\.(md|markdown|txt)$/i, '_cleaned.md') : 'document_cleaned.md';
+    this.elements.exportFileName.value = defaultName;
+    this.elements.exportModal.style.display = 'block';
+    this.elements.exportBackdrop.style.display = 'block';
+    document.body.classList.add('modal-open');
+};
+
+MarkdownCleanerApp.prototype.closeExportModal = function() {
+    this.elements.exportModal.style.display = 'none';
+    this.elements.exportBackdrop.style.display = 'none';
+    document.body.classList.remove('modal-open');
+};
+
+MarkdownCleanerApp.prototype.handleExportConfirm = async function() {
+    try {
+        const fileName = (this.elements.exportFileName.value || 'document_cleaned.md').trim();
+        const mode = (document.querySelector('input[name="exportMode"]:checked')?.value) || 'picker';
+        const content = this.elements.markdownEditor.value || '';
+        if (!content.trim()) {
+            this.showError('没有可导出的内容');
+            return;
+        }
+        if (mode === 'picker' && window.showSaveFilePicker) {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: fileName,
+                types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md'] } }]
+            });
+            const writable = await handle.createWritable();
+            await writable.write(new Blob([content], { type: 'text/markdown;charset=utf-8' }));
+            await writable.close();
+            this.updateStatus(`已导出到：${handle.name}`);
+        } else {
+            const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+            this.updateStatus(`文件已下载: ${fileName}`);
+        }
+    } catch (e) {
+        this.showError('导出失败: ' + e.message);
+    } finally {
+        this.closeExportModal();
+    }
+};
+
 // 页面加载完成后初始化应用
 document.addEventListener('DOMContentLoaded', () => {
     window.markdownApp = new MarkdownCleanerApp();
 });
+
+MarkdownCleanerApp.prototype.parseOutlineFromContent = function() {
+    const content = this.elements.markdownEditor.value || '';
+    const lines = content.split(/\r?\n/);
+    const outline = [];
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const m = line.match(/^(#{1,2})(.*)$/);
+        if (m) {
+            outline.push({ level: m[1].length, text: (m[2] || '').trim(), lineStart: i });
+        }
+    }
+    const sections = [];
+    for (let idx = 0; idx < outline.length; idx++) {
+        const start = outline[idx].lineStart;
+        const end = (idx < outline.length - 1) ? outline[idx + 1].lineStart - 1 : lines.length - 1;
+        sections.push({ heading: outline[idx].text, level: outline[idx].level, range: { start, end }, stats: {} });
+    }
+    return { outline, sections };
+};
+
+MarkdownCleanerApp.prototype.jumpToLine = function(lineNumber) {
+    const content = this.elements.markdownEditor.value || '';
+    const lines = content.split(/\r?\n/);
+    const clamp = Math.max(1, Math.min(lineNumber, lines.length));
+    let index = 0;
+    for (let i = 0; i < clamp - 1; i++) {
+        index += lines[i].length + 1; // + newline
+    }
+    this.elements.markdownEditor.focus();
+    this.elements.markdownEditor.setSelectionRange(index, index);
+    // 粗略滚动到可视区域
+    this.elements.markdownEditor.scrollTop = this.elements.markdownEditor.scrollHeight * (clamp / lines.length);
+};
+
+MarkdownCleanerApp.prototype.getTypeIcon = function(type) {
+    if (type === 'error') return '❌';
+    if (type === 'warning') return '⚠️';
+    return '✅';
+};

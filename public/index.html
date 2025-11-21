@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MarkDown 文档整理工具</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/default.min.css">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
 <body>
     <div class="container">
@@ -35,6 +34,19 @@
                         <span class="file-name" id="fileName"></span>
                         <button class="btn-clear" id="clearFile">✕</button>
                     </div>
+                </div>
+
+                <!-- 操作按钮（上移：先检查再修复导出） -->
+                <div class="actions-section">
+                    <button class="btn-secondary" id="analyzeBtn" disabled>
+                        🔎 检查与建议
+                    </button>
+                    <button class="btn-primary" id="processBtn" disabled>
+                        ⚡ 一键修复
+                    </button>
+                    <button class="btn-download" id="exportBtn" disabled>
+                        💾 导出文件
+                    </button>
                 </div>
 
                 <!-- 修复选项 -->
@@ -77,19 +89,6 @@
                             </div>
                         </label>
                     </div>
-                </div>
-
-                <!-- 操作按钮 -->
-                <div class="actions-section">
-                    <button class="btn-primary" id="processBtn" disabled>
-                        ⚡ 一键修复
-                    </button>
-                    <button class="btn-secondary" id="previewBtn" disabled>
-                        👁️ 预览对比
-                    </button>
-                    <button class="btn-download" id="downloadBtn" style="display: none;">
-                        💾 下载文件
-                    </button>
                 </div>
 
                 <!-- 处理状态 -->
@@ -155,12 +154,59 @@
                 </div>
             </section>
         </main>
+        <div class="issues-backdrop" id="issuesBackdrop" style="display:none;"></div>
+        <div class="issues-panel" id="issuesPanel" style="display:none;">
+            <div class="issues-header">
+                <h3>检查结果</h3>
+                <button class="btn-close-panel" id="closeIssuesPanel">×</button>
+            </div>
+            <div class="issues-list" id="issuesList"></div>
+        </div>
+
+        <!-- 导出弹窗 -->
+        <div class="modal-backdrop" id="exportBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="exportModal" style="display:none;">
+            <div class="issues-header">
+                <h3>导出文件</h3>
+                <button class="btn-close-panel" id="closeExportModal">×</button>
+            </div>
+            <div class="issues-list">
+                <div class="issues-summary">
+                    <div class="summary-line">文件名：</div>
+                    <input id="exportFileName" type="text" style="width:100%;padding:8px;border:1px solid #dee2e6;border-radius:6px;" />
+                    <div class="summary-line">方式：</div>
+                    <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                        <input type="radio" name="exportMode" value="picker" checked> 使用系统保存对话框（浏览器支持）
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;">
+                        <input type="radio" name="exportMode" value="download"> 直接下载（浏览器下载栏）
+                    </label>
+                </div>
+                <div class="issues-actions">
+                    <button class="btn-secondary" id="confirmExport">确定导出</button>
+                    <button class="btn-secondary" id="cancelExport">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-backdrop" id="planBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="planModal" style="display:none;">
+            <div class="issues-header">
+                <h3>修复计划</h3>
+                <button class="btn-close-panel" id="closePlanModal">×</button>
+            </div>
+            <div class="issues-list" id="planContent"></div>
+            <div class="issues-actions" style="padding: 15px;">
+                <button class="btn-secondary" id="btnApplySafePlan">仅应用 SAFE 到该板块</button>
+                <button class="btn-secondary" id="btnApplySuggestedPlan">应用 SUGGESTED 到该板块</button>
+                <button class="btn-secondary" id="btnExportPlanJson">导出计划 JSON</button>
+            </div>
+        </div>
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    <script src="/lib/marked/marked.min.js"></script>
+    <script src="js/linter.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
