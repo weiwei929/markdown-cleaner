@@ -33,19 +33,34 @@ class TextProcessor {
         let processedText = text;
 
         try {
+            // 0. 修复断行 (如果启用)
+            if (options.mergeBrokenLines) {
+                processedText = this.mergeBrokenLines(processedText);
+            }
+
             // 1. 格式修复
             if (options.fixFormat !== false) {
                 processedText = this.fixMarkdownFormat(processedText);
             }
 
-            // 2. 标点符号规范化
-            if (options.fixPunctuation !== false) {
-                processedText = this.normalizePunctuation(processedText);
-            }
+            // 2. 标点符号规范化 (已移除自动处理，改为手动检查)
+            // if (options.fixPunctuation !== false) {
+            //     processedText = this.normalizePunctuation(processedText);
+            // }
 
             // 3. 繁简转换
             if (options.convertTraditional !== false && this.opencc) {
                 processedText = this.convertTraditionalToChinese(processedText);
+            }
+            
+            // 4. 统一引号格式 (始终启用)
+            if (options.normalizeQuotes !== false) {
+                processedText = this.normalizeQuotes(processedText);
+            }
+            
+            // 5. 修复空格 (始终启用)
+            if (options.fixSpacing !== false) {
+                processedText = this.fixSpacing(processedText);
             }
 
             return processedText;
@@ -53,6 +68,112 @@ class TextProcessor {
             console.error('文本处理错误:', error);
             throw new Error(`文本处理失败: ${error.message}`);
         }
+    }
+
+    /**
+     * 修复断行（合并段落）
+     * 规则：
+     * 1. 如果当前行和下一行都不是空行，且不是 Markdown 块级元素（标题、列表、引用等），则合并
+     * 2. 中文之间合并时不加空格
+     * 3. 英文或数字之间合并时加空格
+     */
+    mergeBrokenLines(text) {
+        const lines = text.split('\n');
+        const mergedLines = [];
+        
+        // Markdown 块级元素特征
+        const blockPattern = /^(#+ |- |\* |\d+\. |> |```|---|\*\*\*)/;
+        
+        for (let i = 0; i < lines.length; i++) {
+            let currentLine = lines[i].trimEnd(); // 保留前面的缩进，只去除尾部空格
+            
+            // 如果是最后一行，直接添加
+            if (i === lines.length - 1) {
+                mergedLines.push(currentLine);
+                break;
+            }
+            
+            let nextLine = lines[i + 1];
+            
+            // 检查是否应该合并
+            // 条件：
+            // 1. 当前行非空
+            // 2. 下一行非空
+            // 3. 当前行不是块级元素
+            // 4. 下一行不是块级元素
+            // 5. 当前行不以两个以上空格结尾（Markdown 换行语法）
+            if (currentLine.trim().length > 0 && 
+                nextLine.trim().length > 0 && 
+                !blockPattern.test(currentLine.trim()) && 
+                !blockPattern.test(nextLine.trim()) &&
+                !currentLine.endsWith('  ')) {
+                
+                // 决定连接符
+                const lastChar = currentLine.slice(-1);
+                const nextChar = nextLine.trim().slice(0, 1);
+                
+                // 判断是否为中文（包括标点）
+                const isChineseLast = /[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(lastChar);
+                const isChineseNext = /[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(nextChar);
+                
+                // 如果两端都是中文/中文标点，则直接连接；否则加空格
+                const separator = (isChineseLast && isChineseNext) ? '' : ' ';
+                
+                // 合并到当前行
+                // 注意：这里我们修改了 lines[i+1]，实际上是把下一行"吸"了上来
+                // 下一次循环时，处理的就是已经合并过的内容的下一行（原 lines[i+2]）
+                // 但为了简单起见，我们这里直接修改 lines 数组是不安全的，因为我们在遍历它
+                // 更好的方法是：将当前行暂存，看能否与下一行合并
+                
+                // 修正逻辑：
+                // 我们不直接修改 lines[i+1]，而是将 currentLine 与 nextLine 合并，
+                // 然后跳过下一行的处理（i++）
+                // 但是这样只能合并两行。对于多行合并，我们需要一个 while 循环
+                
+                // 重新实现：使用累加器
+            }
+        }
+        
+        // 重新实现逻辑：
+        let resultLines = [];
+        let buffer = '';
+        
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i].trimEnd(); // 去除尾部空格
+            let trimmedLine = line.trim();
+            
+            // 如果是空行或块级元素，先处理缓冲区，然后添加当前行
+            if (trimmedLine.length === 0 || blockPattern.test(trimmedLine)) {
+                if (buffer) {
+                    resultLines.push(buffer);
+                    buffer = '';
+                }
+                resultLines.push(line);
+            } else {
+                // 普通文本行
+                if (buffer) {
+                    // 缓冲区已有内容，尝试合并
+                    const lastChar = buffer.slice(-1);
+                    const nextChar = trimmedLine.slice(0, 1);
+                    
+                    const isChineseLast = /[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(lastChar);
+                    const isChineseNext = /[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(nextChar);
+                    
+                    const separator = (isChineseLast && isChineseNext) ? '' : ' ';
+                    buffer += separator + trimmedLine;
+                } else {
+                    // 缓冲区为空，直接存入
+                    buffer = line;
+                }
+            }
+        }
+        
+        // 处理最后的缓冲区
+        if (buffer) {
+            resultLines.push(buffer);
+        }
+        
+        return resultLines.join('\n');
     }
 
     /**
@@ -148,121 +269,6 @@ class TextProcessor {
     }
 
     /**
-     * 规范化标点符号
-     * @param {string} text - 输入文本
-     * @returns {string} - 标点规范后的文本
-     */
-    normalizePunctuation(text) {
-        // 中文标点符号映射表
-        const chinesePunctuation = {
-            ',': '，',
-            '.': '。',
-            '!': '！',
-            '?': '？',
-            ':': '：',
-            ';': '；',
-            '(': '（',
-            ')': '）',
-            '【': '[',
-            '】': ']',
-            '"': '"',
-            "'": "'"
-        };
-
-        // 英文标点符号映射表
-        const englishPunctuation = {
-            '，': ',',
-            '。': '.',
-            '！': '!',
-            '？': '?',
-            '：': ':',
-            '；': ';',
-            '（': '(',
-            '）': ')',
-            '【': '[',
-            '】': ']',
-            '"': '"',
-            "'": "'"
-        };
-
-        let lines = text.split('\n');
-        let processedLines = [];
-
-        for (let line of lines) {
-            // 跳过代码块和行内代码
-            if (line.match(/^```/) || line.match(/^\s*`[^`]+`\s*$/) || line.match(/^\s{4,}/)) {
-                processedLines.push(line);
-                continue;
-            }
-
-            let processedLine = line;
-
-            // 检测行内是否包含中文
-            const hasChinese = /[\u4e00-\u9fff]/.test(line);
-            
-            // 检测行内是否包含英文单词
-            const hasEnglish = /[a-zA-Z]+/.test(line);
-
-            if (hasChinese && hasEnglish) {
-                // 中英文混合，智能处理
-                processedLine = this.smartPunctuationFix(line);
-            } else if (hasChinese) {
-                // 纯中文或主要是中文，使用中文标点（但跳过引号处理）
-                for (let [eng, chn] of Object.entries(chinesePunctuation)) {
-                    // 避免在 URL 和代码中替换，并跳过引号（在后面统一处理）
-                    if (!line.includes('http') && !line.includes('`') && eng !== '"') {
-                        processedLine = processedLine.replace(new RegExp('\\' + eng, 'g'), chn);
-                    }
-                }
-            } else if (hasEnglish) {
-                // 纯英文，使用英文标点（但保留引号统一处理）
-                for (let [chn, eng] of Object.entries(englishPunctuation)) {
-                    // 跳过引号，在后面统一处理
-                    if (chn !== '"' && chn !== '"') {
-                        processedLine = processedLine.replace(new RegExp(chn, 'g'), eng);
-                    }
-                }
-            }
-
-            // 统一引号格式（在所有其他处理之后）
-            processedLine = this.normalizeQuotes(processedLine);
-
-            // 修复空格问题
-            processedLine = this.fixSpacing(processedLine);
-
-            processedLines.push(processedLine);
-        }
-
-        return processedLines.join('\n');
-    }
-
-    /**
-     * 智能标点处理（中英文混合）
-     */
-    smartPunctuationFix(line) {
-        // 在英文单词和数字周围使用英文标点
-        // 在中文字符周围使用中文标点
-        
-        let result = line;
-        
-        // 处理逗号：英文环境用英文逗号，中文环境用中文逗号
-        result = result.replace(/([a-zA-Z0-9])\s*，\s*([a-zA-Z0-9])/g, '$1, $2');
-        result = result.replace(/([\u4e00-\u9fff])\s*,\s*([\u4e00-\u9fff])/g, '$1，$2');
-        
-        // 处理句号
-        result = result.replace(/([a-zA-Z0-9])\s*。\s*/g, '$1. ');
-        result = result.replace(/([\u4e00-\u9fff])\s*\.\s*$/g, '$1。');
-        
-        // 处理括号
-        result = result.replace(/([a-zA-Z0-9])\s*（/g, '$1 (');
-        result = result.replace(/）\s*([a-zA-Z0-9])/g, ') $1');
-        result = result.replace(/([\u4e00-\u9fff])\s*\(/g, '$1（');
-        result = result.replace(/\)\s*([\u4e00-\u9fff])/g, '）$1');
-        
-        return result;
-    }
-
-    /**
      * 统一引号格式
      */
     normalizeQuotes(line) {
@@ -306,6 +312,24 @@ class TextProcessor {
     }
 
     /**
+     * 一键修复引号（不进行其他处理）
+     */
+    oneClickQuoteFix(text) {
+        const lines = text.split('\n');
+        const processedLines = lines.map(line => this.normalizeQuotes(line));
+        const processedText = processedLines.join('\n');
+        
+        return {
+            text: processedText,
+            fixed: text !== processedText,
+            validation: {
+                original: text.length,
+                processed: processedText.length
+            }
+        };
+    }
+
+    /**
      * 替换引号标记为中文引号对
      */
     replaceQuoteMarkers(text) {
@@ -322,38 +346,6 @@ class TextProcessor {
         });
         
         return result;
-    }
-
-    /**
-     * 修复引号配对（备用方法）
-     */
-    fixQuotePairs(text) {
-        // 简单的引号配对处理
-        // 将连续的引号合并，并确保成对出现
-        let result = text;
-        
-        // 合并连续的中文双引号
-        result = result.replace(/[""]{2,}/g, '"');
-        
-        // 处理引号配对（简单实现）
-        // 分割所有可能的引号字符
-        const quoteChars = /["""]/g;
-        const parts = result.split(quoteChars);
-        const quotes = result.match(quoteChars) || [];
-        
-        let rebuiltText = '';
-        let isOpening = true;
-        
-        for (let i = 0; i < parts.length; i++) {
-            rebuiltText += parts[i];
-            if (i < quotes.length) {
-                // 添加配对的中文引号，交替开闭
-                rebuiltText += isOpening ? '"' : '"';
-                isOpening = !isOpening;
-            }
-        }
-        
-        return rebuiltText;
     }
 
     /**

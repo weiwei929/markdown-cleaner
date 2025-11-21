@@ -145,6 +145,43 @@ app.post('/api/process-text', async (req, res) => {
 });
 
 /**
+ * 专门的引号修复端点 - 一键修复中文引号错位
+ */
+app.post('/api/fix-quotes', async (req, res) => {
+    try {
+        const { content } = req.body;
+        
+        if (!content) {
+            return res.status(400).json({
+                success: false,
+                error: '请提供文本内容'
+            });
+        }
+
+        // 一键修复引号
+        const result = textProcessor.oneClickQuoteFix(content);
+
+        res.json({
+            success: true,
+            data: {
+                originalContent: content,
+                fixedContent: result.text,
+                validation: result.validation,
+                wasFixed: result.fixed,
+                message: result.fixed ? '✅ 引号错位已修复' : 'ℹ️ 未发现引号问题'
+            }
+        });
+
+    } catch (error) {
+        console.error('引号修复错误:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || '引号修复失败'
+        });
+    }
+});
+
+/**
  * 获取应用信息
  */
 app.get('/api/info', (req, res) => {
