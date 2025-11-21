@@ -3,6 +3,51 @@
  * 功能：执行规则检查，返回错误列表
  */
 
+/**
+ * 修复优先级定义
+ */
+const FIX_PRIORITY = {
+    SAFE: {
+        level: 1,
+        name: '安全修复',
+        icon: '✅',
+        color: '#2ecc71',
+        autoFix: true,
+        description: '不改变文字内容，只调整格式',
+        codes: ['missing-space', 'header-space', 'mixed-punc', 'indent-style']
+    },
+    SUGGESTED: {
+        level: 2,
+        name: '建议修复',
+        icon: '⚠️',
+        color: '#f39c12',
+        autoFix: false,
+        description: '可能改变文字排版，但不改变内容',
+        codes: ['broken-line']
+    },
+    WARNING: {
+        level: 3,
+        name: '警告修复',
+        icon: '❌',
+        color: '#e74c3c',
+        autoFix: false,
+        description: '可能改变文字内容或含义',
+        codes: []
+    }
+};
+
+/**
+ * 根据错误代码获取优先级
+ */
+function getPriorityByCode(code) {
+    for (const [key, priority] of Object.entries(FIX_PRIORITY)) {
+        if (priority.codes.includes(code)) {
+            return { ...priority, key };
+        }
+    }
+    return { ...FIX_PRIORITY.WARNING, key: 'WARNING' }; // 默认为警告级别
+}
+
 class MarkdownLinter {
     constructor() {
         this.rules = [
@@ -17,7 +62,7 @@ class MarkdownLinter {
     /**
      * 执行所有检查
      * @param {string} text - 待检查的文本
-     * @returns {Array} - 错误列表
+     * @returns {Object} - 包含问题列表和统计信息的对象
      */
     lint(text) {
         const lines = text.split('\n');
@@ -45,7 +90,45 @@ class MarkdownLinter {
             allIssues = allIssues.concat(brokenLineIssues);
         }
 
-        return allIssues;
+        // 为每个问题添加优先级信息
+        allIssues = allIssues.map(issue => {
+            const priority = getPriorityByCode(issue.code);
+            return { ...issue, priority };
+        });
+
+        // 按优先级分组
+        const grouped = this.groupByPriority(allIssues);
+
+        return {
+            issues: allIssues,
+            grouped: grouped,
+            stats: {
+                total: allIssues.length,
+                safe: grouped.SAFE?.length || 0,
+                suggested: grouped.SUGGESTED?.length || 0,
+                warning: grouped.WARNING?.length || 0
+            }
+        };
+    }
+
+    /**
+     * 按优先级分组问题
+     */
+    groupByPriority(issues) {
+        const grouped = {
+            SAFE: [],
+            SUGGESTED: [],
+            WARNING: []
+        };
+
+        issues.forEach(issue => {
+            const key = issue.priority.key;
+            if (grouped[key]) {
+                grouped[key].push(issue);
+            }
+        });
+
+        return grouped;
     }
 
     /**
@@ -239,3 +322,4 @@ class MarkdownLinter {
 
 // 导出给全局使用
 window.MarkdownLinter = MarkdownLinter;
+window.FIX_PRIORITY = FIX_PRIORITY;
