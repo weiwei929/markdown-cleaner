@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MarkDown 文档整理工具</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style-new.css">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
 <body>
@@ -12,7 +12,7 @@
         <!-- 头部标题 -->
         <header class="header">
             <h1>📝 MarkDown 文档整理工具</h1>
-            <p>格式修复 · 标点规范 · 繁简转换</p>
+            <p>格式修复 · 标点规范 · 繁简转换 · 智能纠错 · 专家规则</p>
         </header>
 
         <!-- 主要内容区域 -->
@@ -31,9 +31,9 @@
                 </div>
             </div>
         </div>
-        <div id="modeBar" style="display:none;padding:8px 16px;background:#f8f9fa;border-bottom:1px solid #dee2e6;">
+        <div id="modeBar" style="display:none;">
             <span id="modeText">当前模式：</span>
-            <button class="btn-secondary" id="backToOverviewBtn" style="float:right;">返回总览</button>
+            <button class="btn-secondary" id="backToOverviewBtn">返回总览</button>
         </div>
         <main class="main-content" id="mainContent">
             <!-- 左侧控制面板 -->
@@ -343,5 +343,6 @@
     <script src="js/planModal.js"></script>
     <script src="js/navigation.js"></script>
     <script src="js/app.js?v=ui2"></script>
+    <script src="js/app-ui-patch.js"></script>
 </body>
 </html>
