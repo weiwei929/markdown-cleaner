@@ -65,19 +65,6 @@ npm install
 ```
 
 3. 启动服务：
-```bash
-npm start
-```
-
-4. 打开浏览器访问 http://localhost:3000
-
-### VPS 部署
-如果你想在服务器上部署使用，请参考 [部署指南](DEPLOY.md)：
-- 🖥️ 支持 Ubuntu/CentOS/Debian 服务器
-- 🔄 Nginx 反向代理配置
-- ⚡ PM2 进程管理和自动重启
-- 🔒 SSL 证书配置
-- 🛡️ 防火墙和安全设置
 
 ### 访问应用
 

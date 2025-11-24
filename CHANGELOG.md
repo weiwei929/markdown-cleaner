@@ -18,6 +18,21 @@
 ### Changed
 - **App Logic**: Refactored `app.js` to support standalone quote fixing and better search integration.
 
+## [1.1.0] - 2025-11-24
+
+### 🏗️ 重构 (Refactor)
+
+#### 前端架构模块化
+- **问题描述**: 原有的 `app.js` 单体文件过于庞大（1500+ 行），难以维护和扩展
+- **解决方案**: 采用 ES Modules 进行模块化重构
+- **模块划分**:
+  - `Core`: `App.js` (入口), `State.js` (状态管理)
+  - `UI`: `UIManager.js`, `ModalManager.js`, `EditorManager.js`
+  - `Features`: `FileHandler.js`, `ExpertSystem.js`, `BasicCleaner.js`, `Settings.js`, `Navigation.js`, `PlanManager.js`
+  - `Utils`: `API.js`, `DOM.js`
+- **影响范围**: 前端所有功能
+- **验证结果**: 功能与旧版完全一致，代码结构更清晰
+
 ## [1.0.1] - 2025-11-20
 
 ### 🔧 修复 (Fixed)
