@@ -1,6 +1,14 @@
 /**
- * Markdown 文档检查器 (Linter)
- * 功能：执行规则检查，返回错误列表
+ * Markdown 文档检查器 (Linter) - 已退役
+ * 
+ * ⚠️ 注意：此模块已退役，不再维护。
+ * 所有检查功能已迁移到后端 Analyzer（/api/analyze）。
+ * 
+ * 保留此文件仅为了向后兼容，新代码应使用：
+ * - API.analyzeContent(content) 调用后端分析
+ * - ExpertSystem.analyzeContent() 使用后端结果
+ * 
+ * 功能：执行规则检查，返回错误列表（已废弃）
  */
 
 /**

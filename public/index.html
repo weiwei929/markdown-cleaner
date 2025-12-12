@@ -55,71 +55,32 @@
                     </div>
                 </div>
 
-                <!-- 操作按钮（上移：先检查再修复导出） -->
+                <!-- 操作按钮（统一大小和样式） -->
                 <div class="actions-section">
-                    <button class="btn-secondary" id="analyzeBtn" disabled>
+                    <button class="btn-action btn-analyze" id="analyzeBtn" disabled>
                         🔎 检查与建议
                     </button>
-                    <button class="btn-primary" id="processBtn" disabled>
+                    <button class="btn-action btn-process" id="processBtn" disabled>
                         ⚡ 一键修复
                     </button>
-                    <button class="btn-download" id="exportBtn" disabled>
+                    <button class="btn-action btn-transfer" id="transferToExpertBtn" disabled style="display: none;">
+                        🚀 转入 AI 专家版
+                    </button>
+                    <button class="btn-action btn-export" id="exportBtn" disabled>
                         💾 导出文件
                     </button>
-                    <button class="btn-secondary" id="expertRulesBtn" disabled>
+                    <button class="btn-action btn-options" id="optionsBtn">
+                        🔧 修复选项
+                    </button>
+                    <button class="btn-action btn-expert-rules" id="expertRulesBtn" disabled>
                         🧠 专家规则
                     </button>
-                    <button class="btn-secondary" id="expertRunBtn" disabled>
+                    <button class="btn-action btn-expert-run" id="expertRunBtn" disabled>
                         🚀 提交专家处理
                     </button>
-                    <button class="btn-secondary" id="findReplaceBtn" disabled>
+                    <button class="btn-action btn-find-replace" id="findReplaceBtn" disabled>
                         🔍 查找替换
                     </button>
-                    <button class="btn-secondary" id="settingsBtn">
-                        ⚙ 设置
-                    </button>
-                </div>
-
-                <!-- 修复选项 -->
-                <div class="options-section" id="optionsSection">
-                    <h3>🔧 修复选项</h3>
-                    <div class="option-group">
-                        <label class="option-item">
-                            <input type="checkbox" id="fixFormat" checked>
-                            <span class="checkmark"></span>
-                            <div class="option-content">
-                                <strong>格式修复</strong>
-                                <small>标题层级、列表缩进、代码块格式</small>
-                            </div>
-                        </label>
-                        
-                        <label class="option-item">
-                            <input type="checkbox" id="fixPunctuation" checked>
-                            <span class="checkmark"></span>
-                            <div class="option-content">
-                                <strong>标点规范</strong>
-                                <small>中英文标点符号规范化</small>
-                            </div>
-                        </label>
-                        
-                        <label class="option-item">
-                            <input type="checkbox" id="convertTraditional" checked>
-                            <span class="checkmark"></span>
-                            <div class="option-content">
-                                <strong>繁简转换</strong>
-                                <small>繁体中文转换为简体中文</small>
-                            </div>
-                        </label>
-                       
-                        <label class="option-item">
-                            <input type="checkbox" id="mergeBrokenLines">
-                            <span class="checkmark"></span>
-                            <div class="option-content">
-                                <strong>合并断行</strong>
-                                <small>合并段落中的断行</small>
-                            </div>
-                        </label>
-                    </div>
                 </div>
 
                 <!-- 处理状态 -->
@@ -145,10 +106,6 @@
                 <div class="editor-container">
                     <!-- 源码编辑器 -->
                     <div class="editor-pane active" id="editorPane">
-                        <div class="editor-toolbar">
-                            <span class="toolbar-title">源码编辑 (支持手动微调)</span>
-                            <button class="btn-reset" id="resetBtn" title="重置到原始内容">↺ 重置</button>
-                        </div>
                         <textarea id="markdownEditor" placeholder="选择 Markdown 文件开始编辑..."></textarea>
                     </div>
 
@@ -236,30 +193,6 @@
             </div>
         </div>
 
-        <!-- 设置弹窗 -->
-        <div class="modal-backdrop" id="settingsBackdrop" style="display:none;"></div>
-        <div class="modal-panel" id="settingsModal" style="display:none;">
-            <div class="issues-header">
-                <h3>设置</h3>
-                <button class="btn-close-panel" id="closeSettingsModal">×</button>
-            </div>
-            <div class="issues-list">
-                <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-                    <input type="checkbox" id="settingEnableHotkeys" /> 启用键盘快捷键（Alt+↑/↓ 跳转板块）
-                </label>
-                <div class="summary-line">差异高亮模式：</div>
-                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                    <input type="radio" name="settingDiffMode" value="line" /> 行级
-                </label>
-                <label style="display:flex;align-items:center;gap:8px;">
-                    <input type="radio" name="settingDiffMode" value="token" /> 字词级
-                </label>
-                <div class="issues-actions" style="margin-top:10px;">
-                    <button class="btn-secondary" id="saveSettingsBtn">保存</button>
-                    <button class="btn-secondary" id="cancelSettingsBtn">取消</button>
-                </div>
-            </div>
-        </div>
 
         <!-- 专家版规则设定弹窗 -->
         <div class="modal-backdrop" id="expertBackdrop" style="display:none;"></div>
@@ -274,6 +207,58 @@
                 <div class="issues-actions" style="margin-top:10px;">
                     <button class="btn-secondary" id="saveExpertRules">保存规则</button>
                     <button class="btn-secondary" id="cancelExpertRules">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 修复选项弹窗 -->
+        <div class="modal-backdrop" id="optionsBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="optionsModal" style="display:none;">
+            <div class="issues-header">
+                <h3>🔧 修复选项</h3>
+                <button class="btn-close-panel" id="closeOptionsModal">×</button>
+            </div>
+            <div class="issues-list">
+                <div class="option-group" style="padding: 10px 0;">
+                    <label class="option-item">
+                        <input type="checkbox" id="fixFormat" checked>
+                        <span class="checkmark"></span>
+                        <div class="option-content">
+                            <strong>格式修复</strong>
+                            <small>标题层级、列表缩进、代码块格式</small>
+                        </div>
+                    </label>
+                    
+                    <label class="option-item">
+                        <input type="checkbox" id="fixPunctuation" checked>
+                        <span class="checkmark"></span>
+                        <div class="option-content">
+                            <strong>标点规范</strong>
+                            <small>中英文标点符号规范化</small>
+                        </div>
+                    </label>
+                    
+                    <label class="option-item">
+                        <input type="checkbox" id="convertTraditional" checked>
+                        <span class="checkmark"></span>
+                        <div class="option-content">
+                            <strong>繁简转换</strong>
+                            <small>繁体中文转换为简体中文</small>
+                        </div>
+                    </label>
+                   
+                    <label class="option-item">
+                        <input type="checkbox" id="mergeBrokenLines" checked>
+                        <span class="checkmark"></span>
+                        <div class="option-content">
+                            <strong>合并断行</strong>
+                            <small>合并段落中的断行</small>
+                        </div>
+                    </label>
+                </div>
+                <div class="issues-actions" style="margin-top:15px;">
+                    <button class="btn-secondary" id="saveOptions">确定</button>
+                    <button class="btn-secondary" id="cancelOptions">取消</button>
                 </div>
             </div>
         </div>
@@ -338,6 +323,7 @@
 
     <!-- Scripts -->
     <script src="/lib/marked/marked.min.js"></script>
+    <script src="/lib/dompurify/purify.min.js"></script>
     <script src="js/linter.js"></script>
     <!-- New Modular Entry Point -->
     <script type="module" src="js/main.js"></script>

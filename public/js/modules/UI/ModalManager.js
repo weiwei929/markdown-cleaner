@@ -9,7 +9,8 @@ export class ModalManager {
             return: document.getElementById('returnModal'),
             issues: document.getElementById('issuesPanel'),
             interactive: document.getElementById('interactivePanel'),
-            plan: document.getElementById('planModal')
+            plan: document.getElementById('planModal'),
+            options: document.getElementById('optionsModal')
         };
         
         this.backdrops = {
@@ -20,7 +21,8 @@ export class ModalManager {
             return: document.getElementById('returnBackdrop'),
             issues: document.getElementById('issuesBackdrop'),
             interactive: document.getElementById('interactiveBackdrop'),
-            plan: document.getElementById('planBackdrop')
+            plan: document.getElementById('planBackdrop'),
+            options: document.getElementById('optionsBackdrop')
         };
 
         this.bindEvents();
@@ -41,7 +43,8 @@ export class ModalManager {
             'cancelSettingsBtn': 'settingsModal',
             'cancelExpertRules': 'expertModal',
             'cancelFindReplace': 'findReplaceModal',
-            'btnReturnCancel': 'returnModal'
+            'btnReturnCancel': 'returnModal',
+            'cancelOptions': 'optionsModal'
         };
 
         for (const [btnId, modalId] of Object.entries(cancelMap)) {

@@ -1,6 +1,6 @@
 function getPriorityByCode(code) {
     const FIX_PRIORITY = {
-        SAFE: { level: 1, key: 'SAFE', codes: ['missing-space', 'header-space', 'mixed-punc', 'indent-style'] },
+        SAFE: { level: 1, key: 'SAFE', codes: ['missing-space', 'header-space', 'mixed-punc', 'indent-style', 'quote-style'] },
         SUGGESTED: { level: 2, key: 'SUGGESTED', codes: ['broken-line'] },
         WARNING: { level: 3, key: 'WARNING', codes: [] }
     };
@@ -10,12 +10,87 @@ function getPriorityByCode(code) {
     return { level: 3, key: 'WARNING', codes: [] };
 }
 
+/**
+ * 检查引号格式问题
+ * 检测非中文引号的使用
+ */
+function checkQuotes(line, lineIndex) {
+    const issues = [];
+    // 跳过代码块和行内代码
+    if (line.match(/^```/) || line.match(/^\s*`[^`]+`\s*$/) || line.match(/^\s{4,}/)) {
+        return issues;
+    }
+    
+    // 中文双引号 Unicode
+    const chineseDoubleLeft = String.fromCharCode(8220);  // "
+    const chineseDoubleRight = String.fromCharCode(8221); // "
+    const chineseSingleLeft = String.fromCharCode(8216);  // '
+    const chineseSingleRight = String.fromCharCode(8217); // '
+    
+    // 检测各种非标准引号
+    const quotePatterns = [
+        { pattern: /"/g, name: '英文半角引号', correct: chineseDoubleLeft },
+        { pattern: /"/g, name: '英文全角引号', correct: chineseDoubleLeft },
+        { pattern: /「/g, name: '繁体左引号', correct: chineseDoubleLeft },
+        { pattern: /」/g, name: '繁体右引号', correct: chineseDoubleRight },
+        { pattern: /『/g, name: '繁体左书名号', correct: chineseDoubleLeft },
+        { pattern: /』/g, name: '繁体右书名号', correct: chineseDoubleRight }
+    ];
+    
+    quotePatterns.forEach(({ pattern, name, correct }) => {
+        let match;
+        while ((match = pattern.exec(line)) !== null) {
+            issues.push({
+                line: lineIndex,
+                startCol: match.index,
+                endCol: match.index + match[0].length,
+                type: 'warning',
+                code: 'quote-style',
+                message: `检测到${name}，建议使用中文引号`,
+                fix: {
+                    type: 'replace',
+                    text: correct
+                }
+            });
+        }
+    });
+    
+    return issues;
+}
+
 function checkIndent(line, lineIndex) {
     const issues = [];
-    const match = line.match(/^(\u3000|\s{2,})/);
-    const isListOrQuote = /^(\s*[-*+>]|\s*\d+\.)/.test(line);
-    if (match && !isListOrQuote) {
-        issues.push({ line: lineIndex, startCol: 0, endCol: match[0].length, type: 'warning', code: 'indent-style', message: '段首包含缩进（建议移除）' });
+    const trimmed = line.trim();
+    
+    // 空行跳过
+    if (trimmed.length === 0) return issues;
+    
+    // 保留代码块（4个空格开头）
+    if (line.match(/^ {4}/)) return issues;
+    
+    // 保留 Markdown 块级元素
+    if (/^(#{1,6})\s/.test(trimmed)) return issues; // 标题
+    if (/^\s*[-*+]\s/.test(trimmed)) return issues; // 无序列表
+    if (/^\s*\d+\.\s/.test(trimmed)) return issues; // 有序列表
+    if (/^\s*>/.test(trimmed)) return issues; // 引用
+    if (/^\s*```/.test(trimmed)) return issues; // 代码块标记
+    if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(trimmed)) return issues; // 分隔线
+    
+    // 检查段首的各种缩进（全角空格、制表符、多个空格等）
+    const match = line.match(/^(\u3000+|\t+|\s{1,3})/);
+    if (match && !/^ {4}/.test(line)) {
+        // 排除列表项延续行（2个空格以上的缩进可能是列表延续）
+        const isListContinuation = /^\s{2,}/.test(line) && lineIndex > 0;
+        if (!isListContinuation) {
+            issues.push({ 
+                line: lineIndex, 
+                startCol: 0, 
+                endCol: match[0].length, 
+                type: 'warning', 
+                code: 'indent-style', 
+                message: '段首包含缩进（建议移除，保持顶格对齐）' 
+            });
+        }
     }
     return issues;
 }
@@ -103,9 +178,10 @@ function analyze(text) {
         const line = lines[i];
         if (line.trim() === '') continue;
         all = all.concat(checkIndent(line, i));
-        // 标题空格提示按需求取消，不再检查
+        all = all.concat(checkHeader(line, i)); // 恢复标题检查
         all = all.concat(checkMixedPunctuation(line, i));
         all = all.concat(checkSpacing(line, i));
+        all = all.concat(checkQuotes(line, i)); // 添加引号检查
     }
     const bl = checkBrokenLines(text);
     all = all.concat(bl);
@@ -145,8 +221,10 @@ function analyzeStructured(text) {
             const line = lines[i] || '';
             if (line.trim() === '') continue;
             issues = issues.concat(checkIndent(line, i));
+            issues = issues.concat(checkHeader(line, i)); // 恢复标题检查
             issues = issues.concat(checkMixedPunctuation(line, i));
             issues = issues.concat(checkSpacing(line, i));
+            issues = issues.concat(checkQuotes(line, i)); // 添加引号检查
         }
         // 断行合并建议（仅该区间）
         const textSlice = lines.slice(sec.range.start + 1, sec.range.end + 1).join('\n');

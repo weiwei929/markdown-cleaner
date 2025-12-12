@@ -1,7 +1,10 @@
 const TextProcessor = require('../../utils/textProcessor');
 
+// 共享 TextProcessor 实例，避免重复初始化 OpenCC
+const sharedTextProcessor = new TextProcessor();
+
 function applyFixes(text, plan) {
-    const tp = new TextProcessor();
+    const tp = sharedTextProcessor;
     const sel = (plan && plan.selectedPriorities) || [];
     const range = plan && plan.sectionRange;
     if (range && Number.isInteger(range.start) && Number.isInteger(range.end)) {
@@ -39,7 +42,7 @@ function applyFixes(text, plan) {
 }
 
 function previewFixes(text, plan) {
-    const tp = new TextProcessor();
+    const tp = sharedTextProcessor;
     const sel = (plan && plan.selectedPriorities) || [];
     const range = plan && plan.sectionRange;
     if (range && Number.isInteger(range.start) && Number.isInteger(range.end)) {

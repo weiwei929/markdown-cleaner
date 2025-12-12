@@ -149,6 +149,30 @@ body {
     cursor: not-allowed;
 }
 
+/* 转入专家版按钮 - 紫色系 */
+.btn-expert-transfer {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    color: white;
+    border: 2px solid transparent;
+    box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
+}
+
+.btn-expert-transfer:hover:not(:disabled) {
+    background: linear-gradient(135deg, #8e44ad, #7d3c98);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(155, 89, 182, 0.4);
+}
+
+.btn-expert-transfer:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-expert-transfer:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #bdc3c7;
+}
+
 /* ============================================
    模式选择卡片（总览页面）
    ============================================ */
@@ -335,35 +359,62 @@ body.mode-expert .editor-section {
 }
 
 /* ============================================
-   选项部分
-   ============================================ */
+    选项部分 - 卡片式布局
+    ============================================ */
 .options-section {
     margin-bottom: 24px;
 }
 
 .option-group {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
     margin-bottom: 16px;
 }
 
 .option-item {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.option-item:hover {
+    border-color: var(--accent-color);
+    background: var(--accent-light);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .option-item input[type="checkbox"] {
     width: 18px;
     height: 18px;
+    margin-top: 2px;
     cursor: pointer;
+    accent-color: var(--accent-color);
 }
 
-.option-item label {
-    cursor: pointer;
+.option-content {
+    flex: 1;
+    line-height: 1.4;
+}
+
+.option-content strong {
+    display: block;
     color: var(--text-color);
     font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.option-content small {
+    color: var(--text-secondary);
+    font-size: 12px;
 }
 
 /* ============================================
@@ -373,10 +424,127 @@ body.mode-expert .editor-section {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    margin-bottom: 24px;
 }
 
-.actions-section button {
+/* 统一的操作按钮样式 */
+.btn-action {
     width: 100%;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn-action:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-action:not(:disabled):active {
+    transform: translateY(0);
+}
+
+/* 检查与建议 - 蓝色 */
+.btn-analyze {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    border: 2px solid transparent;
+}
+
+.btn-analyze:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2980b9, #21618c);
+}
+
+/* 一键修复 - 绿色（主要操作） */
+.btn-process {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: white;
+    border: 2px solid transparent;
+}
+
+.btn-process:hover:not(:disabled) {
+    background: linear-gradient(135deg, #27ae60, #229954);
+}
+
+/* 转入AI专家版 - 紫色 */
+.btn-transfer {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    color: white;
+    border: 2px solid transparent;
+}
+
+.btn-transfer:hover:not(:disabled) {
+    background: linear-gradient(135deg, #8e44ad, #7d3c98);
+}
+
+/* 导出文件 - 橙色 */
+.btn-export {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+    border: 2px solid transparent;
+}
+
+.btn-export:hover:not(:disabled) {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+}
+
+/* 修复选项 - 青色 */
+.btn-options {
+    background: linear-gradient(135deg, #1abc9c, #16a085);
+    color: white;
+    border: 2px solid transparent;
+}
+
+.btn-options:hover:not(:disabled) {
+    background: linear-gradient(135deg, #16a085, #138d75);
+}
+
+/* 专家规则 - 深蓝色 */
+.btn-expert-rules {
+    background: linear-gradient(135deg, #34495e, #2c3e50);
+    color: white;
+    border: 2px solid transparent;
+}
+
+.btn-expert-rules:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2c3e50, #1a252f);
+}
+
+/* 提交专家处理 - 深紫色 */
+.btn-expert-run {
+    background: linear-gradient(135deg, #8e44ad, #7d3c98);
+    color: white;
+    border: 2px solid transparent;
+}
+
+.btn-expert-run:hover:not(:disabled) {
+    background: linear-gradient(135deg, #7d3c98, #6c3483);
+}
+
+/* 查找替换 - 深灰色 */
+.btn-find-replace {
+    background: linear-gradient(135deg, #7f8c8d, #5d6d7e);
+    color: white;
+    border: 2px solid transparent;
+}
+
+.btn-find-replace:hover:not(:disabled) {
+    background: linear-gradient(135deg, #5d6d7e, #4a5f7a);
 }
 
 /* ============================================

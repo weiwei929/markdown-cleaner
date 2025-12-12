@@ -20,9 +20,7 @@ export class EditorManager {
             // Panes
             editorPane: document.getElementById('editorPane'),
             previewPane: document.getElementById('previewPane'),
-            comparePane: document.getElementById('comparePane'),
-            
-            resetBtn: document.getElementById('resetBtn')
+            comparePane: document.getElementById('comparePane')
         };
     }
 
@@ -36,11 +34,7 @@ export class EditorManager {
             this.app.state.set('currentContent', this.elements.editor.value);
         });
 
-        this.elements.resetBtn.addEventListener('click', () => {
-            if (confirm('确定要重置到原始内容吗？所有修改将丢失。')) {
-                this.app.resetContent();
-            }
-        });
+        // 重置功能已移除，用户可以通过重新加载文件来重置
     }
 
     switchTab(tabName) {
@@ -71,7 +65,14 @@ export class EditorManager {
         }
         
         if (window.marked) {
-            this.elements.previewContent.innerHTML = window.marked.parse(content);
+            const rawHtml = window.marked.parse(content);
+            // 预览安全：如果存在 DOMPurify，则对渲染结果做净化，避免 XSS
+            if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+                this.elements.previewContent.innerHTML = window.DOMPurify.sanitize(rawHtml);
+            } else {
+                // 降级：不注入 HTML，避免潜在脚本执行
+                this.elements.previewContent.textContent = content;
+            }
         }
     }
 

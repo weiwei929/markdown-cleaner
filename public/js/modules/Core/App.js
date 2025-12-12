@@ -5,7 +5,6 @@ import { EditorManager } from '../UI/EditorManager.js';
 import { FileHandler } from '../Features/FileHandler.js';
 import { BasicCleaner } from '../Features/BasicCleaner.js';
 import { ExpertSystem } from '../Features/ExpertSystem.js';
-import { Settings } from '../Features/Settings.js';
 import { Navigation } from '../Features/Navigation.js';
 import { PlanManager } from '../Features/PlanManager.js';
 
@@ -31,15 +30,31 @@ export class App {
         this.fileHandler = new FileHandler(this);
         this.basicCleaner = new BasicCleaner(this);
         this.expertSystem = new ExpertSystem(this);
-        this.settings = new Settings(this);
         this.navigation = new Navigation(this);
         this.planManager = new PlanManager(this);
     }
 
     init() {
         console.log('App initialized');
+        // Clear any cached data on fresh start
+        this.clearCacheIfNeeded();
         // Start in overview
         this.switchToMode('overview');
+    }
+
+    /**
+     * Clear cached data if this is a fresh start
+     */
+    clearCacheIfNeeded() {
+        // Only clear transfer-related cache to ensure clean state
+        // Keep user settings and preferences
+        try {
+            // Clear expert draft cache that might be left from previous sessions
+            localStorage.removeItem('mdCleanerDraft_expert');
+            console.log('Cleared transfer cache for clean start');
+        } catch (e) {
+            console.warn('Failed to clear transfer cache:', e);
+        }
     }
 
     switchToMode(mode) {

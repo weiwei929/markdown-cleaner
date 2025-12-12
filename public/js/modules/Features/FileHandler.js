@@ -75,11 +75,18 @@ export class FileHandler {
             this.app.state.set('currentFile', file);
             this.app.state.set('originalContent', content);
             this.app.state.set('currentContent', content);
+            this.app.state.set('processedContent', ''); // 清除之前的处理结果
             
             // Update UI
             this.elements.fileName.textContent = file.name;
             this.elements.uploadArea.style.display = 'none';
             this.elements.fileInfo.style.display = 'flex';
+            
+            // 隐藏转入专家版按钮（新文件加载时）
+            const transferBtn = document.getElementById('transferToExpertBtn');
+            if (transferBtn) {
+                transferBtn.style.display = 'none';
+            }
             
             // Update Editor
             this.app.editorManager.setValue(content);
@@ -92,6 +99,12 @@ export class FileHandler {
             this.app.uiManager.elements.expertRunBtn.disabled = false;
             this.app.uiManager.elements.findReplaceBtn.disabled = false;
             this.app.uiManager.elements.exportBtn.disabled = false;
+            
+            // 恢复修复选项按钮状态
+            const optionsBtn = document.getElementById('optionsBtn');
+            if (optionsBtn) {
+                optionsBtn.disabled = false;
+            }
 
             this.app.uiManager.updateStatus('文件已加载');
         };
@@ -103,11 +116,18 @@ export class FileHandler {
         this.app.state.set('currentFile', null);
         this.app.state.set('originalContent', '');
         this.app.state.set('currentContent', '');
+        this.app.state.set('processedContent', ''); // 清除处理后的内容
         
         this.elements.uploadArea.style.display = 'flex';
         this.elements.fileInfo.style.display = 'none';
         
         this.app.editorManager.setValue('');
+        
+        // 隐藏转入专家版按钮
+        const transferBtn = document.getElementById('transferToExpertBtn');
+        if (transferBtn) {
+            transferBtn.style.display = 'none';
+        }
         
         // Disable buttons
         this.app.uiManager.elements.processBtn.disabled = true;
@@ -116,6 +136,12 @@ export class FileHandler {
         this.app.uiManager.elements.expertRunBtn.disabled = true;
         this.app.uiManager.elements.findReplaceBtn.disabled = true;
         this.app.uiManager.elements.exportBtn.disabled = true;
+        
+        // 恢复修复选项按钮状态
+        const optionsBtn = document.getElementById('optionsBtn');
+        if (optionsBtn) {
+            optionsBtn.disabled = false;
+        }
 
         this.app.uiManager.updateStatus('准备就绪');
     }

@@ -39,16 +39,24 @@ export class Navigation {
         return count;
     }
 
-    // Simplified jump logic for now, as we might not have structure analysis yet
-    // Ideally this should use the analysis result
+    /**
+     * 跳转到上一个问题（基于分析结果）
+     * 当前实现：暂时禁用，等待分析数据支持
+     */
     jumpPrev() {
-        // TODO: Implement using analysis data
-        console.log('Jump Prev not fully implemented');
+        // 功能暂未实现：需要从 state 获取分析结果
+        // 未来实现：从 this.app.state.get('lastAnalysis') 获取问题列表，跳转到上一个问题
+        this.app.uiManager.updateStatus('跳转功能暂未实现，请使用"检查与建议"功能查看问题');
     }
 
+    /**
+     * 跳转到下一个问题（基于分析结果）
+     * 当前实现：暂时禁用，等待分析数据支持
+     */
     jumpNext() {
-        // TODO: Implement using analysis data
-        console.log('Jump Next not fully implemented');
+        // 功能暂未实现：需要从 state 获取分析结果
+        // 未来实现：从 this.app.state.get('lastAnalysis') 获取问题列表，跳转到下一个问题
+        this.app.uiManager.updateStatus('跳转功能暂未实现，请使用"检查与建议"功能查看问题');
     }
 
     updateHotkeys() {
