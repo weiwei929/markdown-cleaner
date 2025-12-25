@@ -4,20 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MarkDown 文档整理工具</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/default.min.css">
+    <link rel="stylesheet" href="css/style-new.css">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
 <body>
     <div class="container">
         <!-- 头部标题 -->
         <header class="header">
             <h1>📝 MarkDown 文档整理工具</h1>
-            <p>格式修复 · 标点规范 · 繁简转换</p>
+            <p>格式修复 · 标点规范 · 繁简转换 · 智能纠错 · 专家规则</p>
         </header>
 
         <!-- 主要内容区域 -->
-        <main class="main-content">
+        <div id="overviewPane" style="display:none;padding:20px;">
+            <div style="text-align:center;margin:20px 0;">
+                <h2>选择模式</h2>
+            </div>
+            <div style="display:flex;gap:24px;justify-content:center;">
+                <div id="cardBasic" style="border:1px solid #dee2e6;border-radius:12px;padding:24px;width:380px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+                    <h3 style="font-size:22px;color:#343a40;margin-bottom:8px;">基础版（Basic）</h3>
+                    <p style="color:#343a40;font-size:15px;line-height:1.7;margin:0;">规则化清理：格式/标点/繁简/断行/引号，一键修复</p>
+                </div>
+                <div id="cardExpert" style="border:1px solid #dee2e6;border-radius:12px;padding:24px;width:380px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+                    <h3 style="font-size:22px;color:#343a40;margin-bottom:8px;">AI 专家版（Expert）</h3>
+                    <p style="color:#343a40;font-size:15px;line-height:1.7;margin:0;">差错检查：专家规则、查找替换、候选修复预览</p>
+                </div>
+            </div>
+        </div>
+        <div id="modeBar" style="display:none;">
+            <span id="modeText">当前模式：</span>
+            <button class="btn-secondary" id="backToOverviewBtn">返回总览</button>
+        </div>
+        <main class="main-content" id="mainContent">
             <!-- 左侧控制面板 -->
             <aside class="control-panel">
                 <!-- 文件上传区域 -->
@@ -28,58 +46,40 @@
                         <div class="upload-placeholder">
                             <div class="upload-icon">📄</div>
                             <p>拖拽文件到此处<br>或点击选择文件</p>
-                            <small>支持 .md, .markdown, .txt 格式</small>
+                            <small>支持 .md, .markdown, .txt 格式（最大 5MB）</small>
                         </div>
                     </div>
                     <div class="file-info" id="fileInfo" style="display: none;">
-                        <span class="file-name" id="fileName"></span>
-                        <button class="btn-clear" id="clearFile">✕</button>
+                        <span class="file-name" id="fileName" title=""></span>
+                        <button class="btn-clear" id="clearFile">清空退出</button>
                     </div>
                 </div>
 
-                <!-- 修复选项 -->
-                <div class="options-section">
-                    <h3>🔧 修复选项</h3>
-                    <div class="option-group">
-                        <label class="option-item">
-                            <input type="checkbox" id="fixFormat" checked>
-                            <span class="checkmark"></span>
-                            <div class="option-content">
-                                <strong>格式修复</strong>
-                                <small>标题层级、列表缩进、代码块格式</small>
-                            </div>
-                        </label>
-                        
-                        <label class="option-item">
-                            <input type="checkbox" id="fixPunctuation" checked>
-                            <span class="checkmark"></span>
-                            <div class="option-content">
-                                <strong>标点规范</strong>
-                                <small>中英文标点符号规范化</small>
-                            </div>
-                        </label>
-                        
-                        <label class="option-item">
-                            <input type="checkbox" id="convertTraditional" checked>
-                            <span class="checkmark"></span>
-                            <div class="option-content">
-                                <strong>繁简转换</strong>
-                                <small>繁体中文转换为简体中文</small>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- 操作按钮 -->
+                <!-- 操作按钮（统一大小和样式） -->
                 <div class="actions-section">
-                    <button class="btn-primary" id="processBtn" disabled>
+                    <button class="btn-action btn-analyze" id="analyzeBtn" disabled>
+                        🔎 检查与建议
+                    </button>
+                    <button class="btn-action btn-process" id="processBtn" disabled>
                         ⚡ 一键修复
                     </button>
-                    <button class="btn-secondary" id="previewBtn" disabled>
-                        👁️ 预览对比
+                    <button class="btn-action btn-transfer" id="transferToExpertBtn" disabled style="display: none;">
+                        🚀 转入 AI 专家版
                     </button>
-                    <button class="btn-download" id="downloadBtn" style="display: none;">
-                        💾 下载文件
+                    <button class="btn-action btn-export" id="exportBtn" disabled>
+                        💾 导出文件
+                    </button>
+                    <button class="btn-action btn-options" id="optionsBtn">
+                        🔧 修复选项
+                    </button>
+                    <button class="btn-action btn-expert-rules" id="expertRulesBtn" disabled>
+                        🧠 专家规则
+                    </button>
+                    <button class="btn-action btn-expert-run" id="expertRunBtn" disabled>
+                        🚀 提交专家处理
+                    </button>
+                    <button class="btn-action btn-find-replace" id="findReplaceBtn" disabled>
+                        🔍 查找替换
                     </button>
                 </div>
 
@@ -106,11 +106,10 @@
                 <div class="editor-container">
                     <!-- 源码编辑器 -->
                     <div class="editor-pane active" id="editorPane">
-                        <div class="editor-toolbar">
-                            <span class="toolbar-title">源码编辑 (支持手动微调)</span>
-                            <button class="btn-reset" id="resetBtn" title="重置到原始内容">↺ 重置</button>
+                        <div class="editor-wrapper">
+                            <div class="line-numbers" id="lineNumbers">1</div>
+                            <textarea id="markdownEditor" placeholder="选择 Markdown 文件开始编辑..." spellcheck="false"></textarea>
                         </div>
-                        <textarea id="markdownEditor" placeholder="选择 Markdown 文件开始编辑..."></textarea>
                     </div>
 
                     <!-- 预览区域 -->
@@ -146,12 +145,191 @@
                 </div>
             </section>
         </main>
+        <div class="modal-backdrop" id="returnBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="returnModal" style="display:none;">
+            <div class="issues-header">
+                <h3>返回总览</h3>
+                <button class="btn-close-panel" id="closeReturnModal">×</button>
+            </div>
+            <div class="issues-list">
+                <div class="summary-line">是否保存当前内容为草稿？</div>
+                <div class="issues-actions" style="margin-top:10px;">
+                    <button class="btn-secondary" id="btnReturnSave">保存并返回</button>
+                    <button class="btn-secondary" id="btnReturnNoSave">直接返回</button>
+                    <button class="btn-secondary" id="btnReturnCancel">取消</button>
+                </div>
+                <div class="summary-line" id="returnSavingHint" style="display:none;color:#0d6efd;">请稍候，内容正在保存中……</div>
+            </div>
+        </div>
+        <div class="issues-backdrop" id="issuesBackdrop" style="display:none;"></div>
+        <div class="issues-panel" id="issuesPanel" style="display:none;">
+            <div class="issues-header">
+                <h3>检查结果</h3>
+                <button class="btn-close-panel" id="closeIssuesPanel">×</button>
+            </div>
+            <div class="issues-list" id="issuesList"></div>
+        </div>
+
+        <!-- 导出弹窗 -->
+        <div class="modal-backdrop" id="exportBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="exportModal" style="display:none;">
+            <div class="issues-header">
+                <h3>导出文件</h3>
+                <button class="btn-close-panel" id="closeExportModal">×</button>
+            </div>
+            <div class="issues-list">
+                <div class="issues-summary">
+                    <div class="summary-line">文件名：</div>
+                    <input id="exportFileName" type="text" style="width:100%;padding:8px;border:1px solid #dee2e6;border-radius:6px;" />
+                    <div class="summary-line">方式：</div>
+                    <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                        <input type="radio" name="exportMode" value="picker" checked> 使用系统保存对话框（浏览器支持）
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;">
+                        <input type="radio" name="exportMode" value="download"> 直接下载（浏览器下载栏）
+                    </label>
+                </div>
+                <div class="issues-actions">
+                    <button class="btn-secondary" id="confirmExport">确定导出</button>
+                    <button class="btn-secondary" id="cancelExport">取消</button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- 专家版规则设定弹窗 -->
+        <div class="modal-backdrop" id="expertBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="expertModal" style="display:none;">
+            <div class="issues-header">
+                <h3>专家版规则设定（对话式）</h3>
+                <button class="btn-close-panel" id="closeExpertModal">×</button>
+            </div>
+            <div class="issues-list">
+                <div class="summary-line">说明：请输入需要修复的内容与方式（如：错别字、语法风格、术语统一）。</div>
+                <textarea id="expertPrompt" style="width:100%;height:160px;border:1px solid #dee2e6;border-radius:6px;padding:8px;" placeholder="示例：请纠正错别字，不改变段落结构与 Markdown 语法。"></textarea>
+                <div class="issues-actions" style="margin-top:10px;">
+                    <button class="btn-secondary" id="saveExpertRules">保存规则</button>
+                    <button class="btn-secondary" id="cancelExpertRules">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 修复选项弹窗 -->
+        <div class="modal-backdrop" id="optionsBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="optionsModal" style="display:none;">
+            <div class="issues-header">
+                <h3>🔧 修复选项</h3>
+                <button class="btn-close-panel" id="closeOptionsModal">×</button>
+            </div>
+            <div class="issues-list">
+                <div class="option-group" style="padding: 10px 0;">
+                    <label class="option-item">
+                        <input type="checkbox" id="fixFormat" checked>
+                        <span class="checkmark"></span>
+                        <div class="option-content">
+                            <strong>格式修复</strong>
+                            <small>标题层级、列表缩进、代码块格式</small>
+                        </div>
+                    </label>
+                    
+                    <label class="option-item">
+                        <input type="checkbox" id="fixPunctuation" checked>
+                        <span class="checkmark"></span>
+                        <div class="option-content">
+                            <strong>标点规范</strong>
+                            <small>中英文标点符号规范化</small>
+                        </div>
+                    </label>
+                    
+                    <label class="option-item">
+                        <input type="checkbox" id="convertTraditional" checked>
+                        <span class="checkmark"></span>
+                        <div class="option-content">
+                            <strong>繁简转换</strong>
+                            <small>繁体中文转换为简体中文</small>
+                        </div>
+                    </label>
+                   
+                    <label class="option-item">
+                        <input type="checkbox" id="mergeBrokenLines" checked>
+                        <span class="checkmark"></span>
+                        <div class="option-content">
+                            <strong>合并断行</strong>
+                            <small>合并段落中的断行</small>
+                        </div>
+                    </label>
+                </div>
+                <div class="issues-actions" style="margin-top:15px;">
+                    <button class="btn-secondary" id="saveOptions">确定</button>
+                    <button class="btn-secondary" id="cancelOptions">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 查找替换弹窗 -->
+        <div class="modal-backdrop" id="findReplaceBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="findReplaceModal" style="display:none;">
+            <div class="issues-header">
+                <h3>查找替换</h3>
+                <button class="btn-close-panel" id="closeFindReplaceModal">×</button>
+            </div>
+            <div class="issues-list">
+                <div class="summary-line">查找：</div>
+                <input id="findText" type="text" style="width:100%;padding:8px;border:1px solid #dee2e6;border-radius:6px;margin-bottom:8px;" />
+                <div class="summary-line">替换为：</div>
+                <input id="replaceText" type="text" style="width:100%;padding:8px;border:1px solid #dee2e6;border-radius:6px;margin-bottom:8px;" />
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <input type="checkbox" id="findCaseSensitive" /> 区分大小写
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                    <input type="checkbox" id="findUseRegex" /> 使用正则表达式
+                </label>
+                <div class="issues-actions" style="margin-top:10px;">
+                    <button class="btn-secondary" id="btnReplaceAll">替换全部</button>
+                    <button class="btn-secondary" id="btnStartInteractive">逐个替换</button>
+                    <button class="btn-secondary" id="cancelFindReplace">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 逐个替换面板 -->
+        <div class="modal-backdrop" id="interactiveBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="interactivePanel" style="display:none;max-width:720px;">
+            <div class="issues-header">
+                <h3>逐个替换</h3>
+                <button class="btn-close-panel" id="closeInteractivePanel">×</button>
+            </div>
+            <div class="issues-list" id="interactiveContent">
+                <div class="summary-line">当前匹配位置将高亮于编辑器中。</div>
+                <div class="issues-actions" style="margin-top:10px;">
+                    <button class="btn-secondary" id="btnReplaceCurrent">替换</button>
+                    <button class="btn-secondary" id="btnSkipCurrent">跳过</button>
+                    <button class="btn-secondary" id="btnStopInteractive">停止</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-backdrop" id="planBackdrop" style="display:none;"></div>
+        <div class="modal-panel" id="planModal" style="display:none;">
+            <div class="issues-header">
+                <h3>修复计划</h3>
+                <button class="btn-close-panel" id="closePlanModal">×</button>
+            </div>
+            <div class="issues-list" id="planContent"></div>
+            <div class="issues-actions" style="padding: 15px;">
+                <button class="btn-secondary" id="btnApplySafePlan">仅应用 SAFE 到该板块</button>
+                <button class="btn-secondary" id="btnApplySuggestedPlan">应用 SUGGESTED 到该板块</button>
+                <button class="btn-secondary" id="btnExportPlanJson">导出计划 JSON</button>
+            </div>
+        </div>
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
-    <script src="js/app.js"></script>
+    <script src="/lib/marked/marked.min.js"></script>
+    <script src="/lib/dompurify/purify.min.js"></script>
+    <script src="js/linter.js"></script>
+    <!-- New Modular Entry Point -->
+    <script type="module" src="js/main.js"></script>
+
 </body>
 </html>

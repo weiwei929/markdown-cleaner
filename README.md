@@ -1,17 +1,54 @@
-# 📝 MarkDown 文档整理工具
-
-一个专门用于整理和规范 Markdown 文档的本地工具，支持格式修复、标点规范化、引号统一和繁简转换。
-
-## ✨ 功能特性
-
-- **📐 格式修复** - 自动修复标题层级、列表缩进、代码块格式等问题
-- **📝 标点规范** - 智能处理中英文标点符号混用问题
-- **🔤 引号统一** - 将各种引号统一为中文双引号 `"` `"`
+- **🔤 引号统一** - 将各类引号统一为中文双引号（U+201C/U+201D）
 - **🈚 繁简转换** - 将繁体中文自动转换为简体中文
 - **🛠️ 手动微调** - 支持实时编辑器内手动调整修复结果
 - **👁️ 实时预览** - 提供 Markdown 渲染效果的实时预览 *（注：引号显示可能有差异）*
 - **⚖️ 对比视图** - 修复前后内容对比，清晰看到所有变更
 - **💾 文件下载** - 正确保存处理后的文档，保持所有格式修复
+
+## 🎯 项目目标与核心痛点
+
+- 目标：替代手工修复，自动完成格式整理、标点规范、繁简转换、引号统一与断行合并；后续引入 AI 辅助处理高风险改动
+- 痛点：
+  - 格式混乱（标题空格、列表缩进、代码块与空行不规范）
+  - 标点错乱（中文语境英文标点、英文语境中文标点）
+  - 中英文空格（中英文之间缺少或多余空格）
+  - 繁简转换（繁体统一为简体）
+  - 断行合并（段内不应断开的内容自动合并）
+- 引号统一（各类引号统一为中文双引号，保护代码片段）
+
+详见变更日志：`CHANGELOG.md`
+
+### 🤖 AI 专家版（规划中）
+- 目的：更高阶文本修复（错别字、重复词、语法与风格、人物关系一致性等）
+- 模式：与基础版互斥的独立模式，通过开关进入；优先对基础版处理后的内容执行
+- 接入：后端预备接口 `/api/ai/suggest` 已提供（基础规则），前端入口暂未启用，待模式与流程定稿
+
+#### 供应商策略
+- 主供应商：Gemini（优先使用），预留 OpenAI/Azure OpenAI/Claude 等可插拔能力
+- 配置读取自环境变量（如 `GEMINI_API_KEY`），不在仓库写入密钥
+
+#### 规则与提示词交互
+- 专家版提供“规则设定”窗口，用户以对话指定“修复什么？如何修复？”
+- 必选能力：错别字纠错；可选能力：重复词/重复标点/语法风格/术语统一/人物关系一致性
+- 禁止内容审核：专家版仅执行文本修复与校对，不做内容审查
+
+## 🧭 界面与模式架构
+
+- 总览页：启动后仅显示项目呼号与两张模式卡片（基础版/AI 专家版），点击进入对应模式；模式内仅保留“返回总览”
+- 基础版 UI：左侧为文件导入/导出、检查与建议、一键修复、修复选项、基础设置（快捷键默认禁用）；右侧为编辑/预览/对比
+- 专家版 UI：左侧为文件导入/导出、专家规则、提交专家处理、查找替换（替换全部/逐个替换）；右侧为编辑/预览/对比
+- 返回总览：弹窗强提示“保存并返回/直接返回/取消”；选择“保存并返回”时写入 localStorage 草稿并提示“请稍候，内容正在保存中……”
+- 草稿键名：`mdCleanerDraft_basic`、`mdCleanerDraft_expert`；模式状态键：`mdCleanerUiMode`
+- 布局保证：CSS 使用 `.main-content { display: grid; grid-template-columns: 340px 1fr }`，并在窄屏保持两列（280px + 1fr）
+
+## 📝 变更日志
+
+详细变更记录请查看：`CHANGELOG.md`
+
+**最新版本：** v1.2.0 (2025-12-12)
+- ✨ UI/UX 优化：修复选项改为弹出式、统一按钮样式、智能按钮状态管理
+- 🔒 安全加固：CORS 配置、API 限流、统一错误处理、Request ID
+- 🚀 稳定性改进：OpenCC 惰性初始化、性能优化、错误处理改进
 
 ## 🚀 快速开始
 
@@ -28,24 +65,46 @@ cd markdown-cleaner
 npm install
 ```
 
-3. 启动服务：
+3. 配置环境变量（可选）：
+```bash
+# 复制示例文件
+cp .env.example .env
+
+# 编辑 .env 文件，配置必要的环境变量
+# 生产环境必须配置 CORS_ORIGINS
+```
+
+4. 启动服务：
 ```bash
 npm start
 ```
 
-4. 打开浏览器访问 http://localhost:3000
-
-### VPS 部署
-如果你想在服务器上部署使用，请参考 [部署指南](DEPLOY.md)：
-- 🖥️ 支持 Ubuntu/CentOS/Debian 服务器
-- 🔄 Nginx 反向代理配置
-- ⚡ PM2 进程管理和自动重启
-- 🔒 SSL 证书配置
-- 🛡️ 防火墙和安全设置
-
 ### 访问应用
 
 打开浏览器访问：`http://localhost:3000`
+
+### 生产环境部署
+
+**重要配置：**
+- 必须设置 `NODE_ENV=production`
+- 必须配置 `CORS_ORIGINS`（允许的域名，逗号分隔）
+- 建议配置 API 限流参数（`RATE_LIMIT_*`）
+- 可选配置 `GEMINI_API_KEY`（启用 AI 专家版功能）
+
+**环境变量说明：**
+```env
+# 必需（生产环境）
+NODE_ENV=production
+CORS_ORIGINS=https://your-domain.com
+
+# 可选（有默认值）
+PORT=3000
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+STRICT_RATE_LIMIT_WINDOW_MS=60000
+STRICT_RATE_LIMIT_MAX_REQUESTS=10
+GEMINI_API_KEY=your_key_here
+```
 
 ## 📖 使用说明
 
@@ -58,6 +117,7 @@ npm start
 - **格式修复**：修复标题、列表、代码块等格式问题
 - **标点规范**：规范中英文标点符号使用
 - **繁简转换**：将繁体中文转为简体中文
+- **合并断行**：智能合并段落中的断行，保留 Markdown 结构
 
 ### 3. 处理文档
 - 点击"⚡ 一键修复"开始自动处理
@@ -136,38 +196,66 @@ npm start
 ## 📁 项目结构
 
 ```
-MarkDownCleaner/
-├── server.js                 # Express 服务器
+markdown-cleaner/
+├── server.js                 # Express 服务器（含安全中间件）
 ├── package.json             # 项目配置
+├── .env.example             # 环境变量配置模板
 ├── utils/
 │   └── textProcessor.js     # 文本处理核心模块
+├── src/
+│   └── domain/              # 业务逻辑层
+│       ├── analyzer.js      # 规则分析器
+│       ├── fixer.js         # 修复应用器
+│       └── ai.js            # AI 专家系统
 ├── public/                  # 前端资源
 │   ├── index.html          # 主页面
 │   ├── css/
-│   │   └── style.css       # 样式文件
+│   │   └── style-new.css   # 样式文件（CSS 变量系统）
 │   └── js/
-│       └── app.js          # 前端应用逻辑
-└── test-document.md        # 测试文档样例
+│       ├── main.js         # ES Module 入口
+│       └── modules/        # 模块化代码
+│           ├── Core/      # 核心模块（App, State）
+│           ├── UI/         # UI 管理（UIManager, ModalManager, EditorManager）
+│           ├── Features/   # 功能模块（FileHandler, BasicCleaner, ExpertSystem）
+│           └── Utils/      # 工具模块（API）
+└── docs/                   # 文档目录
+    ├── ARCHITECTURE_DIAGRAM.md  # 架构图
+    └── ENGINEERING_STANDARDS.md # 工程规范
 ```
 
-## 🧪 测试样例
+## 🧪 测试
+
+### 测试样例
 
 项目中包含多个测试文件，你可以用它们来测试工具的各项功能：
 
-### `test-document.md` - 综合测试
-- 包含格式不规范的标题和列表
-- 混合使用中英文标点符号
-- 包含繁体中文字符
-- 各种 Markdown 语法元素
+- **`test-document.md`** - 综合测试：格式问题、标点问题、繁体字、各种 Markdown 语法
+- **`test-article.md`** - 文章测试：标点符号、引号、格式问题
+- **`test-line-break.md`** - 断行测试：断行合并功能测试
 
-### `quote-test.md` - 引号测试
-- 各种类型的引号测试
-- 英文引号、繁体引号、书名号等
-- 混合使用场景测试
+### 测试指南
 
-### `quote-verify.md` - 引号验证
-- 专门用于验证引号处理效果
-- 包含常见的引号使用场景
+**基础版测试：**
+1. 启动服务器：`npm start`
+2. 访问：`http://localhost:3000`
+3. 上传测试文件
+4. 点击"检查与建议"查看问题
+5. 点击"一键修复"处理文档
+6. 查看对比视图确认修改
+7. 导出文件验证结果
+
+**AI 专家版测试（需要 API Key）：**
+1. 配置 `GEMINI_API_KEY` 环境变量
+2. 进入 AI 专家版
+3. 设置专家规则
+4. 提交专家处理
+5. 查看 AI 分析结果
+
+**安全功能测试：**
+- 验证 CORS 配置（生产环境）
+- 测试 API 限流（快速发送多个请求）
+- 检查 Request ID（查看响应头）
+- 验证错误响应格式
 
 ## 🔍 API 接口
 
@@ -255,7 +343,13 @@ const rightQuote = String.fromCharCode(8221); // "
 
 ### 自定义样式
 
-修改 `public/css/style.css` 中的样式定义。
+修改 `public/css/style-new.css` 中的样式定义。项目使用 CSS 变量系统，支持模式切换（基础版/专家版/总览）。
+
+### 环境变量配置
+
+参考 `.env.example` 文件，配置必要的环境变量：
+- **开发环境**：通常只需要 `PORT` 和 `NODE_ENV=development`
+- **生产环境**：必须配置 `CORS_ORIGINS` 和 `NODE_ENV=production`
 
 ### 扩展功能
 
@@ -264,6 +358,7 @@ const rightQuote = String.fromCharCode(8221); // "
 - 支持批量处理功能
 - 添加处理历史记录
 - 修复预览功能的引号显示问题
+- 实现 Navigation 的跳转功能
 
 ## 🤝 贡献
 
