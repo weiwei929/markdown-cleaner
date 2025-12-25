@@ -64,8 +64,22 @@ export class FileHandler {
     }
 
     handleFileSelect(file) {
-        if (!file.name.match(/\.(md|markdown|txt)$/i)) {
-            this.app.uiManager.showError('请选择 Markdown 或文本文件 (.md, .markdown, .txt)');
+        // 文件大小限制（5MB）
+        const MAX_FILE_SIZE = 5 * 1024 * 1024;
+        
+        // 检查文件大小
+        if (file.size > MAX_FILE_SIZE) {
+            const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+            this.app.uiManager.showError(`文件过大 (${sizeMB}MB)，最大支持 ${MAX_FILE_SIZE / 1024 / 1024}MB。请压缩文件或分割成多个小文件。`);
+            return;
+        }
+        
+        // 检查文件格式
+        const allowedExtensions = ['.md', '.markdown', '.txt'];
+        const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        
+        if (!allowedExtensions.includes(fileExt)) {
+            this.app.uiManager.showError(`不支持的文件格式: ${fileExt || '未知格式'}。<br>只支持以下格式: ${allowedExtensions.join(', ')}`);
             return;
         }
 
@@ -78,7 +92,9 @@ export class FileHandler {
             this.app.state.set('processedContent', ''); // 清除之前的处理结果
             
             // Update UI
-            this.elements.fileName.textContent = file.name;
+            const displayName = this.truncateFileName(file.name, 20);
+            this.elements.fileName.textContent = displayName;
+            this.elements.fileName.title = file.name; // 鼠标悬停显示完整文件名
             this.elements.uploadArea.style.display = 'none';
             this.elements.fileInfo.style.display = 'flex';
             
@@ -117,6 +133,10 @@ export class FileHandler {
         this.app.state.set('originalContent', '');
         this.app.state.set('currentContent', '');
         this.app.state.set('processedContent', ''); // 清除处理后的内容
+        
+        // 重置文件名显示和title
+        this.elements.fileName.textContent = '未选择文件';
+        this.elements.fileName.title = '';
         
         this.elements.uploadArea.style.display = 'flex';
         this.elements.fileInfo.style.display = 'none';
@@ -192,5 +212,32 @@ export class FileHandler {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         this.app.uiManager.updateStatus('文件已下载');
+    }
+
+    /**
+     * 截断文件名以适应显示区域
+     * @param {string} filename - 完整文件名
+     * @param {number} maxLength - 最大显示字符数
+     * @returns {string} 截断后的文件名
+     */
+    truncateFileName(filename, maxLength = 20) {
+        if (!filename || filename.length <= maxLength) {
+            return filename;
+        }
+        
+        // 保留扩展名
+        const lastDotIndex = filename.lastIndexOf('.');
+        if (lastDotIndex > 0) {
+            const name = filename.substring(0, lastDotIndex);
+            const ext = filename.substring(lastDotIndex);
+            
+            // 如果文件名（不含扩展名）超过最大长度
+            if (name.length > maxLength) {
+                return name.substring(0, maxLength - 3) + '...' + ext;
+            }
+        }
+        
+        // 如果没有扩展名或整体长度不够
+        return filename.substring(0, maxLength - 3) + '...';
     }
 }

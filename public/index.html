@@ -46,12 +46,12 @@
                         <div class="upload-placeholder">
                             <div class="upload-icon">📄</div>
                             <p>拖拽文件到此处<br>或点击选择文件</p>
-                            <small>支持 .md, .markdown, .txt 格式</small>
+                            <small>支持 .md, .markdown, .txt 格式（最大 5MB）</small>
                         </div>
                     </div>
                     <div class="file-info" id="fileInfo" style="display: none;">
-                        <span class="file-name" id="fileName"></span>
-                        <button class="btn-clear" id="clearFile">✕</button>
+                        <span class="file-name" id="fileName" title=""></span>
+                        <button class="btn-clear" id="clearFile">清空退出</button>
                     </div>
                 </div>
 
@@ -106,7 +106,10 @@
                 <div class="editor-container">
                     <!-- 源码编辑器 -->
                     <div class="editor-pane active" id="editorPane">
-                        <textarea id="markdownEditor" placeholder="选择 Markdown 文件开始编辑..."></textarea>
+                        <div class="editor-wrapper">
+                            <div class="line-numbers" id="lineNumbers">1</div>
+                            <textarea id="markdownEditor" placeholder="选择 Markdown 文件开始编辑..." spellcheck="false"></textarea>
+                        </div>
                     </div>
 
                     <!-- 预览区域 -->

@@ -48,9 +48,9 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// 3. Body 解析（保持现有限制）
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// 3. Body 解析（统一限制为 5MB，与文件上传限制保持一致）
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // 4. API 限流配置
 const apiLimiter = rateLimit({
@@ -150,20 +150,39 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // 配置文件上传
 const storage = multer.memoryStorage();
+
+// 文件大小限制（从环境变量读取，默认 5MB）
+const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024;
+
+// 允许的文件类型
+const ALLOWED_FILE_TYPES = ['.md', '.markdown', '.txt'];
+const ALLOWED_MIME_TYPES = [
+    'text/markdown',
+    'text/plain',
+    'text/x-markdown',
+    'application/octet-stream',
+    'text/md'
+];
+
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 10 * 1024 * 1024 // 10MB 限制
+        fileSize: MAX_FILE_SIZE,
+        files: 1 // 每次只允许上传一个文件
     },
     fileFilter: (req, file, cb) => {
-        // 允许的文件类型
-        const allowedTypes = ['.md', '.markdown', '.txt'];
+        // 检查文件扩展名
         const fileExt = path.extname(file.originalname).toLowerCase();
         
-        if (allowedTypes.includes(fileExt)) {
+        // 检查 MIME 类型
+        const allowedMime = ALLOWED_MIME_TYPES.includes(file.mimetype) || 
+                           file.mimetype.startsWith('text/');
+        
+        if (ALLOWED_FILE_TYPES.includes(fileExt) && allowedMime) {
             cb(null, true);
         } else {
-            cb(new Error('只支持 .md, .markdown, .txt 文件格式'));
+            const errorMsg = `不支持的文件格式: ${fileExt || '未知格式'}。只支持 ${ALLOWED_FILE_TYPES.join(', ')} 格式的文件。`;
+            cb(new Error(errorMsg));
         }
     }
 });
@@ -492,8 +511,8 @@ app.get('/api/info', (req, res) => {
                 '手动微调 - 支持编辑器内手动调整',
                 '实时预览 - Markdown 渲染效果预览'
             ],
-            supportedFormats: ['.md', '.markdown', '.txt'],
-            maxFileSize: '10MB'
+            supportedFormats: ALLOWED_FILE_TYPES,
+            maxFileSize: `${MAX_FILE_SIZE / 1024 / 1024}MB`
         }
     });
 });
@@ -512,17 +531,50 @@ app.get('/api/health', (req, res) => {
 
 // 错误处理中间件
 app.use((error, req, res, next) => {
+    // Multer 文件上传错误
     if (error instanceof multer.MulterError) {
         if (error.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({
                 success: false,
                 error: {
                     code: 'FILE_TOO_LARGE',
-                    message: '文件大小不能超过 10MB',
+                    message: `文件大小不能超过 ${MAX_FILE_SIZE / 1024 / 1024}MB。请压缩文件或分割成多个小文件后重试。`,
                     requestId: req.requestId
                 }
             });
         }
+        if (error.code === 'LIMIT_FILE_COUNT') {
+            return res.status(400).json({
+                success: false,
+                error: {
+                    code: 'TOO_MANY_FILES',
+                    message: '每次只能上传一个文件',
+                    requestId: req.requestId
+                }
+            });
+        }
+        if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+            return res.status(400).json({
+                success: false,
+                error: {
+                    code: 'UNEXPECTED_FILE',
+                    message: '意外的文件字段',
+                    requestId: req.requestId
+                }
+            });
+        }
+    }
+    
+    // 文件格式错误
+    if (error.message && error.message.includes('不支持的文件格式')) {
+        return res.status(400).json({
+            success: false,
+            error: {
+                code: 'INVALID_FILE_TYPE',
+                message: error.message,
+                requestId: req.requestId
+            }
+        });
     }
     
     // CORS 错误

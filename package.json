@@ -1,6 +1,6 @@
 {
   "name": "markdown-cleaner",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "本地 Markdown 文档整理工具 - 格式修复、标点规范、引号统一、繁简转换",
   "main": "server.js",
   "scripts": {

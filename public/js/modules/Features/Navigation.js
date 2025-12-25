@@ -25,7 +25,9 @@ export class Navigation {
         
         editor.focus();
         editor.setSelectionRange(idx, idx);
-        editor.scrollTop = editor.scrollHeight * (clamp / lines.length);
+        
+        // 使用 EditorManager 的高亮功能
+        this.app.editorManager.highlightLine(clamp);
     }
 
     getCurrentLineIndex() {

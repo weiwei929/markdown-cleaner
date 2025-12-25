@@ -19,7 +19,7 @@ try {
     $response = Invoke-RestMethod -Uri "http://localhost:3000/api/info" -Method GET
     Write-Host "   [OK] Version info retrieved" -ForegroundColor Green
     Write-Host "   Version: $($response.data.version)" -ForegroundColor Gray
-    if ($response.data.version -eq "1.0.1") {
+    if ($response.data.version -eq "1.1.0") {
         Write-Host "   [OK] Version is correct (from package.json)" -ForegroundColor Green
     }
 } catch {
@@ -101,7 +101,7 @@ $successCount = 0
 $rateLimitedCount = 0
 1..15 | ForEach-Object {
     try {
-        $response = Invoke-WebRequest -Uri "http://localhost:3000/api/health" -Method GET -UseBasicParsing -ErrorAction Stop
+        $null = Invoke-WebRequest -Uri "http://localhost:3000/api/health" -Method GET -UseBasicParsing -ErrorAction Stop
         $successCount++
     } catch {
         $statusCode = $_.Exception.Response.StatusCode.value__

@@ -75,6 +75,9 @@ class TextProcessor {
                 if (this.opencc) {
                     processedText = this.convertTraditionalToChinese(processedText);
                 }
+                
+                // 3.1 异体字转换（在繁简转换之后执行）
+                processedText = this.convertVariantCharacters(processedText);
             }
             
             // 4. 统一引号格式 (始终启用)
@@ -113,9 +116,9 @@ class TextProcessor {
             // 空行
             if (trimmed.length === 0) return true;
             // Markdown 块级元素
-            if (/^(#{1,6})\s/.test(trimmed)) return true; // 标题
-            if (/^\s*[-*+]\s/.test(trimmed)) return true; // 无序列表
-            if (/^\s*\d+\.\s/.test(trimmed)) return true; // 有序列表
+            if (/^(#{1,6})/.test(trimmed)) return true; // 标题（即使没有空格也不合并）
+            if (/^\s*[-*+]/.test(trimmed)) return true; // 无序列表（即使没有空格也不合并）
+            if (/^\s*\d+\./.test(trimmed)) return true; // 有序列表（即使没有空格也不合并）
             if (/^\s*>/.test(trimmed)) return true; // 引用
             if (/^\s*```/.test(trimmed)) return true; // 代码块
             if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(trimmed)) return true; // 分隔线
@@ -129,7 +132,7 @@ class TextProcessor {
             const trimmed = line.trim();
             const prevTrimmed = prevLine.trim();
             // 如果前一行是列表项开头，且当前行有缩进，则认为是列表项的延续
-            if ((/^\s*[-*+]\s/.test(prevTrimmed) || /^\s*\d+\.\s/.test(prevTrimmed)) &&
+            if ((/^\s*[-*+]/.test(prevTrimmed) || /^\s*\d+\./.test(prevTrimmed)) &&
                 line.match(/^\s{2,}/)) {
                 return true;
             }
@@ -200,8 +203,15 @@ class TextProcessor {
             // 修复段落顶格对齐（移除段首缩进，但保留4空格代码块）
             line = this.fixParagraphIndent(line);
             
-            // 修复标题格式
-            line = this.fixHeadings(line, prevLine, nextLine, processedLines);
+            // 修复标题格式（返回对象）
+            const headingResult = this.fixHeadings(line, prevLine, nextLine);
+            if (headingResult.needsEmptyLineBefore && processedLines.length > 0) {
+                const lastLine = processedLines[processedLines.length - 1];
+                if (lastLine !== '') {
+                    processedLines.push('');
+                }
+            }
+            line = headingResult.line;
             
             // 修复列表格式
             line = this.fixLists(line);
@@ -265,8 +275,9 @@ class TextProcessor {
 
     /**
      * 修复标题格式
+     * 返回一个对象，包含处理后的行和是否需要在前面插入空行
      */
-    fixHeadings(line, prevLine, nextLine, processedLines) {
+    fixHeadings(line, prevLine, nextLine) {
         const headingPattern = /^(#{1,6})\s*(.*)/;
         const match = line.match(headingPattern);
         
@@ -274,19 +285,24 @@ class TextProcessor {
             const level = match[1];
             const content = match[2].trim();
             
-            // 确保标题前后有空行
-            if (prevLine.trim() !== '' && processedLines.length > 0) {
-                // 检查前一行不是空行，则在标题前添加空行
-                if (processedLines[processedLines.length - 1] !== '') {
-                    processedLines.push('');
-                }
-            }
+            // 检查前一行是否也是标题（不管有没有空格）
+            const prevIsHeading = prevLine.match(/^#{1,6}/);
+            
+            // 检查是否需要在标题前添加空行
+            // 只有当前一行不是空行且不是标题时才需要
+            const needsEmptyLineBefore = prevLine.trim() !== '' && !prevIsHeading;
             
             // 标准化标题格式：# + 空格 + 内容
-            return `${level} ${content}`;
+            return {
+                line: `${level} ${content}`,
+                needsEmptyLineBefore: needsEmptyLineBefore
+            };
         }
         
-        return line;
+        return {
+            line: line,
+            needsEmptyLineBefore: false
+        };
     }
 
     /**
@@ -534,6 +550,38 @@ class TextProcessor {
             console.error('繁简转换错误:', error);
             return text;
         }
+    }
+
+    /**
+     * 转换异体字为标准简体字
+     * 这些异体字不遵循标准的简繁体转换规则，需要单独处理
+     * @param {string} text - 输入文本
+     * @returns {string} - 转换后的文本
+     */
+    convertVariantCharacters(text) {
+        // 异体字映射表
+        const variantMap = {
+            '勐': '猛',      // 勐 → 猛
+            '幺': '么',      // 幺 → 么
+            '麽': '么',      // 麽 → 么
+            '豔': '艳',      // 豔 → 艳
+            '洩': '泄',      // 洩 → 泄
+            '週': '周',      // 週 → 周
+            '裡': '里',      // 裡 → 里
+            '髮': '发',      // 髮 → 发（头发）
+            '乾': '干',      // 乾 → 干（干燥）
+            '為': '为',      // 為 → 为
+            '擡': '抬'       // 擡 → 抬
+        };
+
+        // 使用正则表达式替换所有异体字
+        let result = text;
+        for (const [variant, standard] of Object.entries(variantMap)) {
+            // 使用全局替换，替换所有出现的异体字
+            result = result.split(variant).join(standard);
+        }
+
+        return result;
     }
 
     /**

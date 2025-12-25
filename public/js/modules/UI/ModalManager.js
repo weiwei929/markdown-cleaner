@@ -32,8 +32,10 @@ export class ModalManager {
         // Close buttons
         document.querySelectorAll('.btn-close-panel').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const modalId = e.target.closest('.modal-panel, .issues-panel').id;
-                this.closeModalById(modalId);
+                const modal = e.target.closest('.modal-panel, .issues-panel');
+                if (modal && modal.id) {
+                    this.closeModalById(modal.id);
+                }
             });
         });
 
@@ -58,6 +60,7 @@ export class ModalManager {
     openModal(name) {
         if (this.modals[name]) {
             this.modals[name].style.display = 'block';
+            this.modals[name].setAttribute('aria-hidden', 'false');
         }
         if (this.backdrops[name]) {
             this.backdrops[name].style.display = 'block';
@@ -67,6 +70,7 @@ export class ModalManager {
     closeModal(name) {
         if (this.modals[name]) {
             this.modals[name].style.display = 'none';
+            this.modals[name].setAttribute('aria-hidden', 'true');
         }
         if (this.backdrops[name]) {
             this.backdrops[name].style.display = 'none';
@@ -76,7 +80,7 @@ export class ModalManager {
     closeModalById(modalId) {
         // Map ID to name
         for (const [name, element] of Object.entries(this.modals)) {
-            if (element.id === modalId) {
+            if (element && element.id === modalId) {
                 this.closeModal(name);
                 return;
             }

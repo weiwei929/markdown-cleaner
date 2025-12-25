@@ -281,10 +281,10 @@ body.mode-expert .editor-section {
 }
 
 .control-panel {
-    width: 320px;
+    width: 280px; /* 从 320px 减少到 280px */
     flex-shrink: 0;
     background: var(--panel-bg);
-    padding: 24px;
+    padding: 20px; /* 从 24px 减少到 20px */
     border-radius: 12px;
     box-shadow: var(--shadow);
     border: 2px solid var(--border-color);
@@ -345,9 +345,11 @@ body.mode-expert .editor-section {
 
 .file-info {
     display: none;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     gap: 8px;
-    padding: 16px;
+    padding: 12px 16px;
     background: var(--accent-light);
     border-radius: 8px;
     border-left: 4px solid var(--accent-color);
@@ -356,6 +358,34 @@ body.mode-expert .editor-section {
 .file-name {
     font-weight: 600;
     color: var(--accent-color);
+    font-size: 14px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: calc(100% - 100px);
+    cursor: help;
+}
+
+.btn-clear {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-clear:hover {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+    transform: translateY(-1px);
 }
 
 /* ============================================
@@ -590,16 +620,54 @@ body.mode-expert .editor-section {
     display: block;
 }
 
+/* 编辑器包装器（包含行号和编辑器） */
+.editor-wrapper {
+    display: flex;
+    position: relative;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* 行号样式 */
+.line-numbers {
+    background: #f8f9fa;
+    border-right: 1px solid var(--border-color);
+    color: #6c757d;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 15px; /* 从 14px 增加到 15px */
+    line-height: 1.6;
+    padding: 16px 8px;
+    text-align: right;
+    user-select: none;
+    min-width: 40px;
+    overflow: hidden;
+}
+
+.line-numbers span {
+    display: block;
+    height: 24px; /* 调整为 15px * 1.6 = 24px */
+    line-height: 24px;
+}
+
+.line-numbers .highlighted {
+    background: #fff3cd;
+    color: #856404;
+    font-weight: bold;
+}
+
 #markdownEditor {
     width: 100%;
     min-height: 500px;
     padding: 16px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 14px;
+    border: none;
+    border-radius: 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 15px; /* 从 14px 增加到 15px */
     line-height: 1.6;
+    letter-spacing: -0.3px; /* 添加字间距压缩 */
     resize: vertical;
+    outline: none;
 }
 
 .preview-content {
@@ -608,6 +676,9 @@ body.mode-expert .editor-section {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     min-height: 500px;
+    font-size: 15px; /* 增加预览字体大小 */
+    line-height: 1.6;
+    letter-spacing: -0.2px; /* 轻微压缩字间距 */
 }
 
 .preview-placeholder {
@@ -650,9 +721,10 @@ body.mode-expert .editor-section {
 .compare-side pre {
     white-space: pre-wrap;
     word-wrap: break-word;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 13px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 15px; /* 从 13px 增加到 15px */
     line-height: 1.6;
+    letter-spacing: -0.3px; /* 添加字间距压缩 */
     max-height: 500px;
     overflow: auto;
 }

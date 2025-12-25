@@ -3,11 +3,13 @@ export class EditorManager {
         this.app = app;
         this.initElements();
         this.bindEvents();
+        this.initLineNumbers();
     }
 
     initElements() {
         this.elements = {
             editor: document.getElementById('markdownEditor'),
+            lineNumbers: document.getElementById('lineNumbers'),
             previewContent: document.getElementById('previewContent'),
             originalContent: document.getElementById('originalContent'),
             processedContent: document.getElementById('processedContent'),
@@ -30,11 +32,74 @@ export class EditorManager {
         this.elements.compareTab.addEventListener('click', () => this.switchTab('compare'));
         
         this.elements.editor.addEventListener('input', () => {
-            // Debounce preview update could go here
             this.app.state.set('currentContent', this.elements.editor.value);
+            this.updateLineNumbers();
+        });
+
+        // 同步滚动
+        this.elements.editor.addEventListener('scroll', () => {
+            this.syncScroll();
         });
 
         // 重置功能已移除，用户可以通过重新加载文件来重置
+    }
+
+    /**
+     * 初始化行号
+     */
+    initLineNumbers() {
+        this.updateLineNumbers();
+    }
+
+    /**
+     * 更新行号显示
+     */
+    updateLineNumbers() {
+        const content = this.elements.editor.value;
+        const lines = content.split('\n').length;
+        
+        let lineNumbersHtml = '';
+        for (let i = 1; i <= lines; i++) {
+            lineNumbersHtml += `<span data-line="${i}">${i}</span>`;
+        }
+        
+        this.elements.lineNumbers.innerHTML = lineNumbersHtml;
+    }
+
+    /**
+     * 同步行号滚动
+     */
+    syncScroll() {
+        const scrollTop = this.elements.editor.scrollTop;
+        this.elements.lineNumbers.scrollTop = scrollTop;
+    }
+
+    /**
+     * 高亮指定行
+     */
+    highlightLine(lineNumber) {
+        // 移除之前的高亮
+        const prevHighlighted = this.elements.lineNumbers.querySelector('.highlighted');
+        if (prevHighlighted) {
+            prevHighlighted.classList.remove('highlighted');
+        }
+
+        // 添加新的高亮
+        const lineElement = this.elements.lineNumbers.querySelector(`[data-line="${lineNumber}"]`);
+        if (lineElement) {
+            lineElement.classList.add('highlighted');
+            
+            // 滚动到该行
+            const lineHeight = 24; // 与 CSS 中的行高匹配 (15px * 1.6 = 24px)
+            const scrollPosition = (lineNumber - 1) * lineHeight - (this.elements.editor.clientHeight / 2);
+            this.elements.editor.scrollTop = scrollPosition;
+            this.elements.lineNumbers.scrollTop = scrollPosition;
+
+            // 3秒后移除高亮
+            setTimeout(() => {
+                lineElement.classList.remove('highlighted');
+            }, 3000);
+        }
     }
 
     switchTab(tabName) {
@@ -79,6 +144,7 @@ export class EditorManager {
     setValue(content) {
         this.elements.editor.value = content;
         this.app.state.set('currentContent', content);
+        this.updateLineNumbers();
     }
 
     getValue() {
